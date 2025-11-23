@@ -4,31 +4,30 @@
 
 ### ✅ **1. Environment Variables (Vercel)**
 
-All 5 variables are already configured in your Vercel project settings! ✅
+All 4 variables are already configured in your Vercel project settings! ✅
 
 Verify at: https://vercel.com/your-account/carelumi-dmc-pilot/settings/environment-variables
 
-```
-✅ NEXT_PUBLIC_ELEVENLABS_API_KEY
+\`\`\`
 ✅ NEXT_PUBLIC_ELEVENLABS_AGENT_ID  
 ✅ GOOGLE_AI_API_KEY
 ✅ NEXT_PUBLIC_PILOT_MODE
 ✅ AI_GATEWAY_API_KEY
-```
+\`\`\`
 
 ### ✅ **2. Dependencies**
 
 Install Google Generative AI package:
 
-```bash
+\`\`\`bash
 npm install @google/generative-ai@^0.21.0
-```
+\`\`\`
 
 or if using pnpm:
 
-```bash
+\`\`\`bash
 pnpm install @google/generative-ai@^0.21.0
-```
+\`\`\`
 
 ---
 
@@ -36,27 +35,27 @@ pnpm install @google/generative-ai@^0.21.0
 
 ### **Step 1: Copy Environment Variables**
 
-```bash
+\`\`\`bash
 cp .env.local.template .env.local
-```
+\`\`\`
 
 The `.env.local` file is already populated with your API keys.
 
 ### **Step 2: Install Dependencies**
 
-```bash
+\`\`\`bash
 npm install
 # or
 pnpm install
-```
+\`\`\`
 
 ### **Step 3: Run Development Server**
 
-```bash
+\`\`\`bash
 npm run dev
 # or
 pnpm dev
-```
+\`\`\`
 
 Open http://localhost:3000 in your browser.
 
@@ -73,14 +72,14 @@ Open http://localhost:3000 in your browser.
 
 ### **Method 1: Git Push (Recommended)**
 
-```bash
+\`\`\`bash
 # Commit your changes
 git add .
 git commit -m "Add DMC pilot features: ElevenLabs, document upload, sample data"
 
 # Push to your GitHub repo
 git push origin main
-```
+\`\`\`
 
 Vercel will automatically deploy! 🎉
 
@@ -88,13 +87,13 @@ Vercel will automatically deploy! 🎉
 
 ### **Method 2: Vercel CLI**
 
-```bash
+\`\`\`bash
 # Install Vercel CLI (if not installed)
 npm install -g vercel
 
 # Deploy
 vercel --prod
-```
+\`\`\`
 
 ---
 
@@ -157,23 +156,22 @@ Visit: https://carelumi-dmc-pilot.vercel.app
 
 **Solution:**
 1. Go to Vercel → Settings → Environment Variables
-2. Ensure all 5 variables are set for "Production", "Preview", AND "Development"
+2. Ensure all 4 variables are set for "Production", "Preview", AND "Development"
 3. Redeploy: Vercel → Deployments → Click "..." → "Redeploy"
 
 ### **Issue: ElevenLabs Widget Not Loading**
 
 **Check:**
 1. Browser console for errors
-2. Verify NEXT_PUBLIC_ELEVENLABS_API_KEY starts with `sk_`
-3. Verify NEXT_PUBLIC_ELEVENLABS_AGENT_ID starts with `agent_`
-4. Check https://elevenlabs.io/app/conversational-ai → Your agent should be "Published"
+2. Verify NEXT_PUBLIC_ELEVENLABS_AGENT_ID starts with `agent_`
+3. Check https://elevenlabs.io/app/conversational-ai → Your agent should be "Published"
 
 **Fix:**
-```bash
+\`\`\`bash
 # In Vercel dashboard
-Settings → Environment Variables → Edit NEXT_PUBLIC_ELEVENLABS_API_KEY
+Settings → Environment Variables → Edit NEXT_PUBLIC_ELEVENLABS_AGENT_ID
 # Make sure the value is correct (no extra spaces)
-```
+\`\`\`
 
 ### **Issue: Document Classification Fails**
 
@@ -184,11 +182,11 @@ Settings → Environment Variables → Edit NEXT_PUBLIC_ELEVENLABS_API_KEY
 4. Check Google Cloud Console → Vertex AI → Quotas
 
 **Fix:**
-```bash
+\`\`\`bash
 # Test API key locally
 curl "https://generativelanguage.googleapis.com/v1/models?key=YOUR_API_KEY"
 # Should return list of models, not an error
-```
+\`\`\`
 
 ### **Issue: "Failed to classify document" Error**
 
@@ -238,16 +236,16 @@ View deployment metrics:
 ### **1. Never Commit Secrets**
 
 ❌ **Don't:**
-```bash
+\`\`\`bash
 git add .env.local  # NEVER DO THIS
-```
+\`\`\`
 
 ✅ **Do:**
-```bash
+\`\`\`bash
 # .gitignore already includes:
 .env.local
 .env*.local
-```
+\`\`\`
 
 ### **2. Rotate API Keys Regularly**
 

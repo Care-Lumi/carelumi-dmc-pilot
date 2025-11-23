@@ -26,13 +26,13 @@
 ✅ `/package.json` - Added Google Generative AI package
 
 **Change:**
-```json
+\`\`\`json
 "dependencies": {
   "@google/generative-ai": "^0.21.0",  // ← ADDED THIS
   "@hookform/resolvers": "^3.10.0",
   // ... rest of dependencies
 }
-```
+\`\`\`
 
 ---
 
@@ -41,32 +41,32 @@
 ### **Step 1: Copy Files to Your Project** ⏱️ 2 minutes
 
 Option A - Manual Copy:
-```bash
+\`\`\`bash
 # Download all generated files from this chat
 # Copy them to your local carelumi-dmc-pilot project
 # Match the exact folder structure
-```
+\`\`\`
 
 Option B - Direct from outputs folder:
-```bash
+\`\`\`bash
 # All files are in /mnt/user-data/outputs/
 # You can download them individually from this chat
-```
+\`\`\`
 
 ### **Step 2: Install Dependencies** ⏱️ 1 minute
 
-```bash
+\`\`\`bash
 cd carelumi-dmc-pilot
 npm install @google/generative-ai@^0.21.0
-```
+\`\`\`
 
 ### **Step 3: Set Up Environment Variables** ⏱️ 1 minute
 
 **Local Development:**
-```bash
+\`\`\`bash
 cp .env.local.template .env.local
 # File is already populated with your API keys!
-```
+\`\`\`
 
 **Vercel (Already Done! ✅)**
 - Your 5 environment variables are already configured in Vercel
@@ -74,10 +74,10 @@ cp .env.local.template .env.local
 
 ### **Step 4: Test Locally** ⏱️ 5 minutes
 
-```bash
+\`\`\`bash
 npm run dev
 # Open http://localhost:3000
-```
+\`\`\`
 
 **Check:**
 - ✅ Sample data banner shows
@@ -87,18 +87,18 @@ npm run dev
 
 ### **Step 5: Deploy to Vercel** ⏱️ 2 minutes
 
-```bash
+\`\`\`bash
 git add .
 git commit -m "Add DMC pilot features"
 git push origin main
-```
+\`\`\`
 
 Vercel will auto-deploy! ✅
 
 **Or use Vercel CLI:**
-```bash
+\`\`\`bash
 vercel --prod
-```
+\`\`\`
 
 ### **Step 6: Verify Deployment** ⏱️ 3 minutes
 
