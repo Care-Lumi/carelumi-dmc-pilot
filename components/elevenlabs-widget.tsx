@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface ElevenLabsWidgetProps {
   isOpen: boolean
@@ -9,37 +9,44 @@ interface ElevenLabsWidgetProps {
 
 export function ElevenLabsWidget({ isOpen, onClose }: ElevenLabsWidgetProps) {
   const widgetContainerRef = useRef<HTMLDivElement>(null)
+  const [agentId, setAgentId] = useState<string>("")
 
   useEffect(() => {
-    if (!isOpen || typeof window === 'undefined') return
+    fetch("/api/elevenlabs-config")
+      .then((res) => res.json())
+      .then((data) => setAgentId(data.agentId))
+      .catch((err) => console.error("Failed to load ElevenLabs config:", err))
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen || !agentId || typeof window === "undefined") return
 
     // Load ElevenLabs Conversational AI script
-    const script = document.createElement('script')
-    script.src = 'https://elevenlabs.io/convai-widget/index.js'
+    const script = document.createElement("script")
+    script.src = "https://elevenlabs.io/convai-widget/index.js"
     script.async = true
-    
+
     script.onload = () => {
       // Initialize widget when script loads
       if (window.ConvaiWidget && widgetContainerRef.current) {
         window.ConvaiWidget.init({
-          agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
-          apiKey: process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY!,
-          
+          agentId: agentId,
+
           // Widget configuration
-          mode: 'inline', // Embed in our modal instead of floating button
-          
+          mode: "inline", // Embed in our modal instead of floating button
+
           // Visual customization (match Vercel blue design)
-          primaryColor: '#3b82f6',
-          
+          primaryColor: "#3b82f6",
+
           // Auto-open when modal opens
           defaultOpen: true,
-          
+
           // Callbacks
           onReady: () => {
-            console.log('Clip is ready!')
+            console.log("Clip is ready!")
           },
           onError: (error: Error) => {
-            console.error('ElevenLabs widget error:', error)
+            console.error("ElevenLabs widget error:", error)
           },
         })
       }
@@ -52,24 +59,20 @@ export function ElevenLabsWidget({ isOpen, onClose }: ElevenLabsWidgetProps) {
       if (document.body.contains(script)) {
         document.body.removeChild(script)
       }
-      
+
       // Cleanup ElevenLabs widget instance
       if (window.ConvaiWidget?.destroy) {
         window.ConvaiWidget.destroy()
       }
     }
-  }, [isOpen])
+  }, [isOpen, agentId])
 
   if (!isOpen) return null
 
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-50 bg-black/50" 
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} aria-hidden="true" />
 
       {/* Modal */}
       <div className="fixed right-6 top-6 bottom-6 z-50 w-full max-w-2xl rounded-lg border border-border bg-card shadow-lg flex flex-col">
@@ -84,8 +87,8 @@ export function ElevenLabsWidget({ isOpen, onClose }: ElevenLabsWidgetProps) {
               <p className="text-xs text-muted-foreground">AI Compliance Assistant</p>
             </div>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Close chat"
           >
@@ -96,18 +99,15 @@ export function ElevenLabsWidget({ isOpen, onClose }: ElevenLabsWidgetProps) {
         </div>
 
         {/* ElevenLabs Widget Container */}
-        <div 
-          ref={widgetContainerRef} 
-          className="flex-1 overflow-hidden"
-          id="elevenlabs-widget-container"
-        >
+        <div ref={widgetContainerRef} className="flex-1 overflow-hidden" id="elevenlabs-widget-container">
           {/* ElevenLabs widget will be injected here */}
         </div>
 
         {/* Footer hint */}
         <div className="border-t border-border px-6 py-3 bg-muted/30">
           <p className="text-xs text-muted-foreground text-center">
-            💡 <strong>Tip:</strong> Ask about credentialing requirements, multi-state expansion, or document upload help
+            💡 <strong>Tip:</strong> Ask about credentialing requirements, multi-state expansion, or document upload
+            help
           </p>
         </div>
       </div>
@@ -115,14 +115,12 @@ export function ElevenLabsWidget({ isOpen, onClose }: ElevenLabsWidgetProps) {
   )
 }
 
-// TypeScript declarations for ElevenLabs widget
 declare global {
   interface Window {
     ConvaiWidget?: {
       init: (config: {
         agentId: string
-        apiKey: string
-        mode?: 'inline' | 'float'
+        mode?: "inline" | "float"
         primaryColor?: string
         defaultOpen?: boolean
         onReady?: () => void
