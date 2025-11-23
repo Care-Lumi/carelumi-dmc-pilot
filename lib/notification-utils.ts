@@ -106,8 +106,8 @@ export function getNotificationData(demoState?: any, handlers?: NotificationHand
         id: "samuel-license",
         priority: "critical",
         actionRequired: true,
-        title: "Samuel Osei Boateng - Can't practice soon",
-        details: "Illinois OTA License expires 12/31/2025",
+        title: "Dr. Michael Chen - Can't practice soon",
+        details: "Texas Medical License expires 12/31/2025",
         actions: [
           {
             label: "Review & Renew",

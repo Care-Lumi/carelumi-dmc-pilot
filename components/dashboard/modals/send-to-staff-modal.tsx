@@ -50,7 +50,7 @@ export function SendToStaffModal({ isOpen, onClose }: SendToStaffModalProps) {
               <div>
                 <p className="font-semibold text-green-900">Request Sent Successfully!</p>
                 <p className="text-sm text-green-800 mt-1">
-                  Email and SMS sent to Samuel. They have 7 days to complete the renewal.
+                  Email and SMS sent to Dr. Chen. They have 7 days to complete the renewal.
                 </p>
               </div>
             </div>
@@ -60,7 +60,7 @@ export function SendToStaffModal({ isOpen, onClose }: SendToStaffModalProps) {
             <div className="flex items-start gap-3">
               <User className="w-5 h-5 text-blue-600 mt-0.5" />
               <div className="flex-1">
-                <div className="font-semibold text-gray-900 text-lg">Samuel Osei Boateng</div>
+                <div className="font-semibold text-gray-900 text-lg">Dr. Michael Chen</div>
                 <div className="text-sm text-gray-700 mt-1 flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   Illinois OTA License #057.005783
@@ -98,7 +98,7 @@ export function SendToStaffModal({ isOpen, onClose }: SendToStaffModalProps) {
 
             <div className="bg-white border-2 border-gray-300 rounded-lg p-5 space-y-4 text-sm">
               <div className="space-y-2">
-                <p className="text-gray-700">Hi Samuel,</p>
+                <p className="text-gray-700">Hi Dr. Chen,</p>
 
                 <p className="text-gray-700">
                   Your <strong>Illinois OTA License (#057.005783)</strong> expires on{" "}

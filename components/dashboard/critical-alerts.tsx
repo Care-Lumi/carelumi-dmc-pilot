@@ -9,7 +9,7 @@ export function CriticalAlerts() {
     id: "samuel-license",
     type: "error" as const,
     badge: "Critical",
-    title: "Samuel Osei Boateng - License Expiring in <60 Days",
+    title: "Dr. Michael Chen - License Expiring in <60 Days",
     subtitle: "Illinois OTA License expires 12/31/2025",
     actionText: "Review & Renew",
     actionType: "primary" as const,

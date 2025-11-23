@@ -14,7 +14,7 @@ export function ValidateDataModal({ isOpen, onClose }: ValidateDataModalProps) {
   if (!isOpen) return null
 
   const extractedData = {
-    name: "Samuel Osei Boateng",
+    name: "Dr. Michael Chen",
     licenseNumber: "057.005783",
     licenseType: "Illinois OTA",
     expiresAt: "12/31/2025",
@@ -79,7 +79,7 @@ export function ValidateDataModal({ isOpen, onClose }: ValidateDataModalProps) {
                 <div className="flex-1">
                   <p className="text-[15px] font-semibold text-blue-900">I'm the Supervisor - I Can Attest</p>
                   <p className="text-[13px] text-blue-800 mt-1">
-                    <strong>Recommended:</strong> Complete attestation and sign as supervisor, then send to Samuel for
+                    <strong>Recommended:</strong> Complete attestation and sign as supervisor, then send to Dr. Chen for
                     final signature. Fastest option.
                   </p>
                   <p className="text-[12px] text-blue-700 mt-2 font-medium">Estimated time: 5-10 minutes</p>
@@ -96,7 +96,7 @@ export function ValidateDataModal({ isOpen, onClose }: ValidateDataModalProps) {
                 <div className="flex-1">
                   <p className="text-[15px] font-semibold text-gray-900">Send to Staff Member</p>
                   <p className="text-[13px] text-gray-700 mt-1">
-                    Send the entire renewal process to Samuel to complete independently. Requires staff action.
+                    Send the entire renewal process to Dr. Chen to complete independently. Requires staff action.
                   </p>
                   <p className="text-[12px] text-gray-600 mt-2 font-medium">Estimated time: 1-2 business days</p>
                 </div>
@@ -137,7 +137,7 @@ export function ValidateDataModal({ isOpen, onClose }: ValidateDataModalProps) {
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <Image
                 src="/images/screenshot-202025-11-21-20at-201.png"
-                alt="Samuel Osei Boateng License"
+                alt="Dr. Michael Chen License"
                 width={800}
                 height={1000}
                 className="w-full"

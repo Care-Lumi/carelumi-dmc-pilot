@@ -116,7 +116,7 @@ export function StaffActionsModal({ isOpen, onClose, staffMember }: StaffActions
             </button>
             <Image
               src="/images/screenshot-202025-11-21-20at-201.png"
-              alt="Samuel Osei Boateng Illinois OTA License"
+              alt="Dr. Michael Chen Illinois OTA License"
               width={1200}
               height={1600}
               className="rounded-lg"
