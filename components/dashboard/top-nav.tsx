@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { NotificationDropdown } from "./notification-dropdown"
+import { userData, organizations } from "@/lib/dmc-pilot-data"
 import Link from "next/link"
 
 export function TopNav() {
@@ -22,13 +23,22 @@ export function TopNav() {
   const notifications: any[] = []
   const badgeCount = 0
 
+  // Get user initials
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+  }
+
   return (
     <>
       <header className="fixed left-60 right-0 top-0 z-30 h-16 border-b border-border bg-white">
         <div className="flex h-full items-center justify-between px-6">
           {/* Left: Organization name and breadcrumb */}
           <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold text-foreground">Kemit Therapy</h1>
+            <h1 className="text-lg font-semibold text-foreground">{userData.organization}</h1>
             <span className="text-muted-foreground">|</span>
             <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Home
@@ -43,9 +53,11 @@ export function TopNav() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Locations</SelectItem>
-                  <SelectItem value="chicago">Chicago Main</SelectItem>
-                  <SelectItem value="naperville">Naperville</SelectItem>
-                  <SelectItem value="oak-park">Oak Park</SelectItem>
+                  {organizations.dmcInc.locations.map((location) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -78,7 +90,7 @@ export function TopNav() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-9 w-9 rounded-full p-0">
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">AD</AvatarFallback>
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">{getInitials(userData.name)}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
