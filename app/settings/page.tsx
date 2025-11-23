@@ -17,13 +17,13 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile")
 
   const [adminProfile, setAdminProfile] = useState({
-    firstName: "Kiley",
-    lastName: "Russell",
-    email: "kiley.russell@kemittherapy.com",
-    phone: "(708) 555-0192",
-    jobTitle: "Clinic Director",
+    firstName: "John",
+    lastName: "Cavanagh",
+    email: "john@dmc-inc.com",
+    phone: "(817) 555-0198",
+    jobTitle: "Owner & Medical Director",
     department: "Administration",
-    bio: "Alex Chen is a dedicated Compliance Administrator at Kemit Therapy with extensive experience in healthcare regulatory management. Alex specializes in ensuring organizational compliance with state and federal regulations, managing credentialing workflows, and implementing efficient compliance tracking systems.",
+    bio: "John Cavanagh is the Owner and Medical Director at DMC Inc, an ambulatory surgery center in Texas. With extensive experience in surgical care and healthcare management, John specializes in ensuring organizational compliance with state and federal regulations, managing credentialing workflows, and maintaining the highest standards of patient care.",
   })
 
   const tabs = [
@@ -83,7 +83,7 @@ export default function SettingsPage() {
               <CardContent className="p-6 space-y-6">
                 <div className="flex items-center gap-4">
                   <div className="w-20 h-20 rounded-full bg-[#0066FF] flex items-center justify-center text-white text-2xl font-semibold">
-                    AR
+                    JC
                   </div>
                   <div>
                     <Button variant="outline" size="sm">
@@ -171,19 +171,19 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Organization Name</Label>
-                    <Input value="Kemit Therapy" readOnly className="bg-[#f9fafb]" />
+                    <Input value="DMC Inc" readOnly className="bg-[#f9fafb]" />
                   </div>
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Organization Type</Label>
                     <Input
-                      value="Behavioral, Occupational and Speech Therapy Clinic"
+                      value="Ambulatory Surgery Center"
                       readOnly
                       className="bg-[#f9fafb]"
                     />
                   </div>
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Tax ID</Label>
-                    <Input value="**-***4782" readOnly className="bg-[#f9fafb]" />
+                    <Input value="**-***5892" readOnly className="bg-[#f9fafb]" />
                   </div>
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">NPI Number</Label>
@@ -191,7 +191,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="col-span-2">
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Business Address</Label>
-                    <Input value="1820 Ridge Rd, Homewood, IL 60430" readOnly className="bg-[#f9fafb]" />
+                    <Input value="1234 Medical Plaza Dr, Arlington, TX 76010" readOnly className="bg-[#f9fafb]" />
                   </div>
                 </div>
               </CardContent>

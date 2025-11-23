@@ -15,11 +15,11 @@ import Image from "next/image"
 const allDocuments = [
   {
     id: 1,
-    name: "Samuel Osei Boateng - IL OTA License",
+    name: "Dr. Michael Chen - IL OTA License",
     category: "Staff Credentials",
     status: "expired",
     expiryDate: "10/15/2025",
-    staffMember: "Samuel Osei Boateng",
+    staffMember: "Dr. Michael Chen",
   },
   {
     id: 2,
@@ -328,7 +328,7 @@ function DocumentsContent() {
                         <button
                           onClick={() => {
                             if (doc.id === 1) {
-                              // Samuel's OTA License
+                              // Dr. Chen's OTA License
                               setShowLicenseModal(true)
                             } else if (doc.status === "missing") {
                               setShowUploadModal(true)
@@ -474,13 +474,13 @@ function DocumentsContent() {
       <Dialog open={showLicenseModal} onOpenChange={setShowLicenseModal}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Samuel Osei Boateng - IL OTA License</DialogTitle>
+            <DialogTitle>Dr. Michael Chen - IL OTA License</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="rounded-lg border border-border overflow-hidden">
               <Image
                 src="/images/samuel-ota-license.jpg"
-                alt="Samuel Osei Boateng Illinois OTA License"
+                alt="Dr. Michael Chen Texas Medical License"
                 width={800}
                 height={1000}
                 className="w-full h-auto"
