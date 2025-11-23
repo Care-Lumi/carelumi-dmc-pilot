@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { QuickActionsBar } from "@/components/dashboard/quick-actions-bar"
@@ -8,6 +9,7 @@ import { CredentialingPipelineCard } from "@/components/dashboard/credentialing-
 import { ExpiringSoonCard } from "@/components/dashboard/expiring-soon-card"
 import { AuditReadinessCard } from "@/components/dashboard/audit-readiness-card"
 import { CriticalAlerts } from "@/components/dashboard/critical-alerts"
+import { SampleDataBanner } from "@/components/dashboard/sample-data-banner"
 import { AIProcessingModal } from "@/components/dashboard/modals/ai-processing-modal"
 import { ValidateDataModal } from "@/components/dashboard/modals/validate-data-modal"
 import { SendToStaffModal } from "@/components/dashboard/modals/send-to-staff-modal"
@@ -20,12 +22,36 @@ import { AuditLogModal } from "@/components/dashboard/modals/audit-log-modal"
 import { AttestationModal } from "@/components/dashboard/modals/attestation-modal"
 
 export default function DashboardPage() {
+  const [showSampleData, setShowSampleData] = useState(true)
+
+  useEffect(() => {
+    const stored = localStorage.getItem("showDmcSampleData")
+    if (stored !== null) {
+      setShowSampleData(stored === "true")
+    }
+  }, [])
+
+  const handleRemoveSampleData = () => {
+    localStorage.setItem("showDmcSampleData", "false")
+    setShowSampleData(false)
+  }
+
+  const handleRestoreSampleData = () => {
+    localStorage.setItem("showDmcSampleData", "true")
+    setShowSampleData(true)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
       <TopNav />
       <main className="ml-60 mt-16 p-12">
         <div className="mx-auto max-w-[1400px] space-y-8">
+          <SampleDataBanner
+            isVisible={showSampleData}
+            onRemove={handleRemoveSampleData}
+            onRestore={handleRestoreSampleData}
+          />
           <QuickActionsBar />
 
           <div className="grid grid-cols-4 gap-6">

@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
+import { userData } from "@/lib/dmc-pilot-data"
 
 const navigationItems = [
   { name: "Home", href: "/dashboard", icon: Home },
@@ -39,6 +40,15 @@ export function Sidebar() {
   const [showClipChat, setShowClipChat] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+
+  // Get user initials
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+  }
 
   const handleNavigation = (e: React.MouseEvent<HTMLAnchorElement>) => {
     setTimeout(() => {
@@ -110,12 +120,12 @@ export function Sidebar() {
             title={collapsed ? "Admin Profile" : undefined}
           >
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs">KR</AvatarFallback>
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(userData.name)}</AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex-1 truncate text-left">
-                <p className="text-sm font-medium text-foreground">Kiley Russell</p>
-                <p className="text-xs text-muted-foreground">Admin</p>
+                <p className="text-sm font-medium text-foreground">{userData.name}</p>
+                <p className="text-xs text-muted-foreground">{userData.role}</p>
               </div>
             )}
           </button>
