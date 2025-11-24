@@ -189,7 +189,7 @@ function StaffCredentialsContent() {
         <Sidebar />
         <TopNav />
 
-        <main className="ml-60 mt-16 p-12">
+        <main className="ml-60 mt-16 p-12 transition-all duration-300">
           <div className="mx-auto max-w-[1400px]">
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">
@@ -357,7 +357,7 @@ function StaffCredentialsContent() {
                           onClick={() => handleViewRenewal(staff)}
                           className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
                         >
-                          View renewal steps
+                          Renew
                         </button>
                       </div>
                     </div>

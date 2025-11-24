@@ -15,7 +15,17 @@ import Link from "next/link"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 export default function PayerDetailPage({ params }: { params: { id: string } }) {
-  return <PayerDetailContent params={params} />
+  const router = useRouter()
+
+  useEffect(() => {
+    router.push("/payers")
+  }, [router])
+
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+    </div>
+  )
 }
 
 function PayerDetailContent({ params }: { params: { id: string } }) {
@@ -61,6 +71,19 @@ function PayerDetailContent({ params }: { params: { id: string } }) {
         return "bg-gray-100 text-gray-800 border-gray-200"
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  const getStatusTextColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "text-green-600"
+      case "under-review":
+        return "text-amber-600"
+      case "pending":
+        return "text-blue-600"
+      default:
+        return "text-muted-foreground"
     }
   }
 
@@ -152,8 +175,8 @@ function PayerDetailContent({ params }: { params: { id: string } }) {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-3 px-4">Provider Name</th>
-                      <th className="text-left py-3 px-4">Specialty</th>
                       <th className="text-left py-3 px-4">Status</th>
+                      <th className="text-left py-3 px-4">Stage</th>
                       <th className="text-left py-3 px-4">Submission Date</th>
                       {payer.status === "Missing Documents" && (
                         <th className="text-left py-3 px-4">Missing Documents</th>
@@ -162,94 +185,53 @@ function PayerDetailContent({ params }: { params: { id: string } }) {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b">
-                      <td className="py-3 px-4">Dr. Sarah Johnson</td>
-                      <td className="py-3 px-4">Mental Health</td>
-                      <td className="py-3 px-4">
-                        {payer.status === "Active" && (
-                          <span className="text-sm font-medium text-green-600">Active</span>
-                        )}
-                        {payer.status === "In Progress" && (
-                          <span className="text-sm font-medium text-amber-600">In Progress</span>
-                        )}
-                        {payer.status === "Missing Documents" && (
-                          <span className="text-sm font-medium text-destructive-foreground">Missing Documents</span>
-                        )}
-                        {payer.status === "Submitted" && (
-                          <span className="text-sm font-medium text-blue-600">Submitted</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">{payer.submissionDate || "11/15/2025"}</td>
-                      {payer.status === "Missing Documents" && (
-                        <td className="py-3 px-4">
-                          <span className="text-sm text-muted-foreground">Insurance Certificate, W9</span>
+                    {Array.isArray(payer.providers) && payer.providers.length > 0 ? (
+                      payer.providers.map((provider) => (
+                        <tr key={provider.id} className="border-b">
+                          <td className="py-3 px-4">{provider.name}</td>
+                          <td className="py-3 px-4">
+                            <span className={`text-sm font-medium ${getStatusTextColor(provider.status)}`}>
+                              {provider.status
+                                ? provider.status.charAt(0).toUpperCase() + provider.status.slice(1).replace("-", " ")
+                                : "Unknown"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">{payer.stage}</td>
+                          <td className="py-3 px-4">{payer.lastUpdate}</td>
+                          {payer.status === "Missing Documents" && (
+                            <td className="py-3 px-4">
+                              <span className="text-sm text-muted-foreground">{provider.note || "N/A"}</span>
+                            </td>
+                          )}
+                          <td className="py-3 px-4">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline">
+                                  Actions
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setShowClipModal(true)}>Use Clip AI</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setShowHireSpecialistOverlay(true)}>
+                                  Hire Specialist ($65/hr)
+                                </DropdownMenuItem>
+                                {payer.status === "Missing Documents" && (
+                                  <DropdownMenuItem onClick={() => handleUpload(provider.id)}>
+                                    Upload Documents
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr className="border-b">
+                        <td className="py-3 px-4" colSpan={payer.status === "Missing Documents" ? 6 : 5}>
+                          <p className="text-sm text-muted-foreground text-center">No providers enrolled yet</p>
                         </td>
-                      )}
-                      <td className="py-3 px-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              Actions
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setShowClipModal(true)}>Use Clip AI</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowHireSpecialistOverlay(true)}>
-                              Hire Specialist ($65/hr)
-                            </DropdownMenuItem>
-                            {payer.status === "Missing Documents" && (
-                              <DropdownMenuItem onClick={() => handleUpload("provider-1")}>
-                                Upload Documents
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="py-3 px-4">Dr. Michael Chen</td>
-                      <td className="py-3 px-4">Physical Therapy</td>
-                      <td className="py-3 px-4">
-                        {payer.status === "Active" && (
-                          <span className="text-sm font-medium text-green-600">Active</span>
-                        )}
-                        {payer.status === "In Progress" && (
-                          <span className="text-sm font-medium text-amber-600">In Progress</span>
-                        )}
-                        {payer.status === "Missing Documents" && (
-                          <span className="text-sm font-medium text-destructive-foreground">Missing Documents</span>
-                        )}
-                        {payer.status === "Submitted" && (
-                          <span className="text-sm font-medium text-blue-600">Submitted</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">{payer.submissionDate || "11/15/2025"}</td>
-                      {payer.status === "Missing Documents" && (
-                        <td className="py-3 px-4">
-                          <span className="text-sm text-muted-foreground">Background Check</span>
-                        </td>
-                      )}
-                      <td className="py-3 px-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline">
-                              Actions
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setShowClipModal(true)}>Use Clip AI</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowHireSpecialistOverlay(true)}>
-                              Hire Specialist ($65/hr)
-                            </DropdownMenuItem>
-                            {payer.status === "Missing Documents" && (
-                              <DropdownMenuItem onClick={() => handleUpload("provider-2")}>
-                                Upload Documents
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

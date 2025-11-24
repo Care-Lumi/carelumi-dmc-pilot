@@ -73,8 +73,9 @@ export function ClipChatModal({ isOpen, onClose, initialContext }: ClipChatModal
     <>
       <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
 
-      <div className="fixed right-6 top-6 bottom-6 z-50 w-full max-w-2xl rounded-lg border border-border bg-card shadow-lg flex flex-col">
-        <div className="flex items-center justify-between border-b border-border p-6">
+      <div className="fixed right-6 top-6 bottom-6 z-50 w-full max-w-2xl rounded-lg border border-border bg-card shadow-lg flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border p-6 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center">
               <Orb colors={["#F6E7D8", "#E0CFC2"]} agentState={null} className="h-10 w-10" />
@@ -91,29 +92,37 @@ export function ClipChatModal({ isOpen, onClose, initialContext }: ClipChatModal
           </button>
         </div>
 
-        <div className="p-6 pb-0">
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-            This is a trial preview of Clip. Answers are high-level and are not connected to your live data during the
-            free trial.
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto flex flex-col">
+          {/* Trial Banner */}
+          <div className="p-6 pb-0 flex-shrink-0">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              This is a trial preview of Clip. Answers are high-level and are not connected to your live data during the
+              free trial.
+            </div>
           </div>
-        </div>
 
-        <div className="px-6 pt-4 pb-2">
-          <p className="text-sm text-muted-foreground mb-2">Suggested questions:</p>
-          <div className="flex flex-wrap gap-2">
-            {suggestedPrompts.map((prompt, index) => (
-              <button
-                key={index}
-                className="rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
-              >
-                {prompt}
-              </button>
-            ))}
+          {/* Suggested Questions */}
+          <div className="px-6 pt-4 pb-4 flex-shrink-0">
+            <p className="text-sm text-muted-foreground mb-2">Suggested questions:</p>
+            <div className="flex flex-wrap gap-2">
+              {suggestedPrompts.map((prompt, index) => (
+                <button
+                  key={index}
+                  className="rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors text-left"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="flex-1 min-h-0 p-6">
-          <ElevenLabsWidget isOpen={isOpen} onClose={onClose} />
+          {/* ElevenLabs Widget Container */}
+          <div className="flex-1 px-6 pb-6 min-h-[450px]">
+            <div className="h-full w-full rounded-xl overflow-hidden border border-border bg-white">
+              <ElevenLabsWidget />
+            </div>
+          </div>
         </div>
       </div>
     </>

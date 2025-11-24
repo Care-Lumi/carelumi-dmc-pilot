@@ -11,6 +11,7 @@ import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
+import { PayerUpgradeModal } from "@/components/dashboard/payer-upgrade-modal"
 
 export default function PayerCredentialingPage() {
   return <PayerCredentialingContent />
@@ -24,6 +25,7 @@ function PayerCredentialingContent() {
   const [showAddPayerModal, setShowAddPayerModal] = useState(false)
   const [showAddPayerOverlay, setShowAddPayerOverlay] = useState(false)
   const [showClipModal, setShowClipModal] = useState(false)
+  const [showPayerUpgradeModal, setShowPayerUpgradeModal] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -214,7 +216,7 @@ function PayerCredentialingContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => router.push(`/payers/${payer.id}`)}
+                      onClick={() => setShowPayerUpgradeModal(true)}
                       className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
                     >
                       {actionLabel}
@@ -239,6 +241,7 @@ function PayerCredentialingContent() {
         onClose={() => setShowClipModal(false)}
         initialMessage="Review all payers with status In Progress, Submitted, or Missing Documents. Summarize what stage each is in, who it is waiting on, and suggest next actions."
       />
+      <PayerUpgradeModal isOpen={showPayerUpgradeModal} onClose={() => setShowPayerUpgradeModal(false)} />
     </div>
   )
 }

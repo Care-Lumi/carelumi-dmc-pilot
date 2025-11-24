@@ -9,15 +9,15 @@ export const organizations = {
     state: "TX",
     type: "Surgery Center",
     locations: [
-      { 
-        id: "1", 
-        name: "DMC Surgery Center - Arlington", 
-        address: "1234 Medical Plaza Dr, Arlington, TX 76010" 
+      {
+        id: "1",
+        name: "DMC Surgery Center - Arlington",
+        address: "1234 Medical Plaza Dr, Arlington, TX 76010",
       },
-      { 
-        id: "2", 
-        name: "DMC Surgery Center - Fort Worth", 
-        address: "5678 Healthcare Blvd, Fort Worth, TX 76102" 
+      {
+        id: "2",
+        name: "DMC Surgery Center - Fort Worth",
+        address: "5678 Healthcare Blvd, Fort Worth, TX 76102",
       },
     ],
   },
@@ -27,7 +27,8 @@ export const userData = {
   name: "John Cavanagh",
   preferredName: "John",
   email: "john@dmc-inc.com",
-  role: "Owner & Medical Director",
+  role: "Owner",
+  // </CHANGE>
   organization: organizations.dmcInc.name,
   city: organizations.dmcInc.city,
   state: organizations.dmcInc.state,
@@ -54,7 +55,7 @@ export const sampleDocuments = [
       documentType: "Medical License",
       jurisdiction: {
         state: "Texas",
-        issuingBody: "Texas Medical Board"
+        issuingBody: "Texas Medical Board",
       },
       identifiers: {
         licenseNumber: "TX-123456",
@@ -64,18 +65,15 @@ export const sampleDocuments = [
         issueDate: "2023-03-15",
         expirationDate: "2026-03-15",
         isExpired: false,
-        daysUntilExpiration: 478
+        daysUntilExpiration: 478,
       },
       compliance: {
         isValid: true,
         missingInfo: [],
-        warnings: []
+        warnings: [],
       },
-      nextActions: [
-        "Renewal required by 2026-03-15",
-        "Monitor for regulatory changes"
-      ]
-    }
+      nextActions: ["Renewal required by 2026-03-15", "Monitor for regulatory changes"],
+    },
   },
   {
     id: "sample-2",
@@ -95,7 +93,7 @@ export const sampleDocuments = [
       documentType: "DEA Certificate",
       jurisdiction: {
         state: "Texas",
-        issuingBody: "Drug Enforcement Administration"
+        issuingBody: "Drug Enforcement Administration",
       },
       identifiers: {
         licenseNumber: "BC1234567",
@@ -105,17 +103,15 @@ export const sampleDocuments = [
         issueDate: "2024-06-01",
         expirationDate: "2027-06-01",
         isExpired: false,
-        daysUntilExpiration: 557
+        daysUntilExpiration: 557,
       },
       compliance: {
         isValid: true,
         missingInfo: [],
-        warnings: []
+        warnings: [],
       },
-      nextActions: [
-        "Renewal required by 2027-06-01"
-      ]
-    }
+      nextActions: ["Renewal required by 2027-06-01"],
+    },
   },
   {
     id: "sample-3",
@@ -135,7 +131,7 @@ export const sampleDocuments = [
       documentType: "Facility License",
       jurisdiction: {
         state: "Texas",
-        issuingBody: "Texas Department of State Health Services"
+        issuingBody: "Texas Department of State Health Services",
       },
       identifiers: {
         licenseNumber: "ASC-TX-9876",
@@ -145,20 +141,20 @@ export const sampleDocuments = [
         issueDate: "2024-01-10",
         expirationDate: "2025-12-31",
         isExpired: false,
-        daysUntilExpiration: 39
+        daysUntilExpiration: 39,
       },
       compliance: {
         isValid: true,
         missingInfo: [],
-        warnings: ["Expires in 39 days - renewal required"]
+        warnings: ["Expires in 39 days - renewal required"],
       },
       nextActions: [
         "URGENT: Renewal required by 2025-12-31",
         "Application deadline approximately 2025-11-30",
-        "Facility inspection may be required"
-      ]
-    }
-  }
+        "Facility inspection may be required",
+      ],
+    },
+  },
 ]
 
 // Sample dashboard metrics derived from sample documents
@@ -169,14 +165,14 @@ export const sampleMetrics = {
     trend: 0,
     status: "medium" as const,
     providers: [
-      { 
-        name: "Dr. John Cavanagh", 
-        amount: 8500, 
-        reason: "Facility license expiring in 39 days - blocks all procedures" 
+      {
+        name: "Dr. John Cavanagh",
+        amount: 8500,
+        reason: "Facility license expiring in 39 days - blocks all procedures",
       },
     ],
   },
-  
+
   credentialingPipeline: {
     total: 1,
     blocked: 0,
@@ -194,22 +190,22 @@ export const sampleMetrics = {
       },
     ],
   },
-  
+
   expiringSoon: {
     total: 1,
     critical: 1, // <30 days
     warning: 0, // 30-60 days
     items: [
-      { 
-        id: "sample-1", 
-        name: "DMC Arlington - Facility License", 
-        daysUntilExpiration: 39, 
+      {
+        id: "sample-1",
+        name: "DMC Arlington - Facility License",
+        daysUntilExpiration: 39,
         type: "critical",
         isSample: true,
       },
     ],
   },
-  
+
   auditReadiness: {
     percentage: 60,
     missingItems: 4,
@@ -252,7 +248,7 @@ export const emptyState = {
     status: "low" as const,
     providers: [],
   },
-  
+
   credentialingPipeline: {
     total: 0,
     blocked: 0,
@@ -260,14 +256,14 @@ export const emptyState = {
     approved: 0,
     applications: [],
   },
-  
+
   expiringSoon: {
     total: 0,
     critical: 0,
     warning: 0,
     items: [],
   },
-  
+
   auditReadiness: {
     percentage: 0,
     missingItems: 0,
@@ -279,21 +275,21 @@ export const emptyState = {
 
 // Helper to check if sample data is active
 export const isSampleDataActive = () => {
-  if (typeof window === 'undefined') return true // SSR default
-  const sampleDataFlag = localStorage.getItem('carelumi_sample_data')
-  return sampleDataFlag !== 'removed'
+  if (typeof window === "undefined") return true // SSR default
+  const sampleDataFlag = localStorage.getItem("carelumi_sample_data")
+  return sampleDataFlag !== "removed"
 }
 
 // Helper to remove sample data
 export const removeSampleData = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('carelumi_sample_data', 'removed')
+  if (typeof window !== "undefined") {
+    localStorage.setItem("carelumi_sample_data", "removed")
   }
 }
 
 // Helper to restore sample data
 export const restoreSampleData = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('carelumi_sample_data')
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("carelumi_sample_data")
   }
 }

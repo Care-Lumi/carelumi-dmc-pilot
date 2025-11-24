@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
-import { facilities } from "@/lib/placeholder-data"
+import { SANDBOX_FACILITIES } from "@/lib/data/sandbox-data"
 import { ChevronLeft } from "lucide-react"
 
 export default function FacilityDetailPage({ params }: { params: { id: string } }) {
@@ -12,7 +12,7 @@ export default function FacilityDetailPage({ params }: { params: { id: string } 
 }
 
 function FacilityDetailContent({ params }: { params: { id: string } }) {
-  const [facility, setFacility] = useState(() => facilities.find((f) => f.id === params.id))
+  const [facility, setFacility] = useState(() => SANDBOX_FACILITIES.find((f) => f.id === params.id))
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -23,11 +23,25 @@ function FacilityDetailContent({ params }: { params: { id: string } }) {
       <div className="min-h-screen bg-background">
         <Sidebar />
         <TopNav />
-        <main className="ml-60 mt-16 p-12">
+        <main className="ml-60 mt-16 p-12 transition-all duration-300">
           <p>Facility not found</p>
         </main>
       </div>
     )
+  }
+
+  const getLicenseStatus = (expiresAt: string) => {
+    const now = new Date()
+    const expirationDate = new Date(expiresAt)
+    const daysUntilExpiration = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (daysUntilExpiration < 0) {
+      return { label: "Expired", color: "text-red-600" }
+    } else if (daysUntilExpiration <= 30) {
+      return { label: "Expiring Soon", color: "text-yellow-600" }
+    } else {
+      return { label: "Active", color: "text-green-600" }
+    }
   }
 
   return (
@@ -35,7 +49,7 @@ function FacilityDetailContent({ params }: { params: { id: string } }) {
       <Sidebar />
       <TopNav />
 
-      <main className="ml-60 mt-16 p-12">
+      <main className="ml-60 mt-16 p-12 transition-all duration-300">
         <div className="mx-auto max-w-[1400px]">
           <Link
             href="/facilities"
@@ -49,51 +63,48 @@ function FacilityDetailContent({ params }: { params: { id: string } }) {
           <p className="mb-2 text-sm text-muted-foreground">{facility.address}</p>
           <p className="mb-8 text-sm text-foreground">
             Status:{" "}
-            <span className="font-medium text-green-600">
-              {facility.status.charAt(0).toUpperCase() + facility.status.slice(1)}
+            <span className={`font-medium ${facility.statusColor}`}>
+              {facility.status === "compliant"
+                ? "Compliant"
+                : facility.status === "at-risk"
+                  ? "At Risk"
+                  : "Missing Docs"}
             </span>
           </p>
 
           {/* State Facility Licenses */}
           <div className="mb-6 rounded-lg border border-border bg-card p-6">
             <h3 className="mb-4 text-lg font-semibold text-foreground">State Facility Licenses</h3>
-            {facility.licenses.map((license) => (
-              <div key={license.id} className="space-y-2">
-                <p className="font-medium text-foreground">{license.type}</p>
-                <p className="text-sm text-foreground">License #: {license.number}</p>
-                <p className="text-sm text-foreground">
-                  Status:{" "}
-                  <span className="font-medium text-green-600">
-                    {license.status.charAt(0).toUpperCase() + license.status.slice(1)}
-                  </span>
-                </p>
-                <p className="text-sm text-foreground">Expires: {new Date(license.expiresAt).toLocaleDateString()}</p>
-                <div className="mt-3 flex gap-3">
-                  <button className="text-sm font-medium text-primary hover:underline">View License</button>
-                  <button className="text-sm font-medium text-primary hover:underline">Renew</button>
+            {facility.licenses.map((license, index) => {
+              const status = getLicenseStatus(license.expiresAt)
+
+              return (
+                <div key={index} className="space-y-2 mb-6 last:mb-0">
+                  <p className="font-medium text-foreground">{license.name}</p>
+                  <p className="text-sm text-foreground">
+                    Status: <span className={`font-medium ${status.color}`}>{status.label}</span>
+                  </p>
+                  <p className="text-sm text-foreground">Expires: {new Date(license.expiresAt).toLocaleDateString()}</p>
+                  <div className="mt-3 flex gap-3">
+                    <button className="text-sm font-medium text-primary hover:underline">View License</button>
+                    <button className="text-sm font-medium text-primary hover:underline">Renew</button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Safety & Inspections */}
           <div className="rounded-lg border border-border bg-card p-6">
             <h3 className="mb-4 text-lg font-semibold text-foreground">Safety & Inspections</h3>
             <div className="space-y-2">
-              {facility.inspections.map((inspection) => (
-                <p key={inspection.id} className="text-sm text-foreground">
-                  {inspection.type}:{" "}
-                  {inspection.status === "current" ? (
-                    <span className="font-medium text-green-600">
-                      Current (expires {new Date(inspection.expiresAt).toLocaleDateString()})
-                    </span>
-                  ) : (
-                    <span className="font-medium text-yellow-600">
-                      Scheduled {new Date(inspection.scheduledDate!).toLocaleDateString()}
-                    </span>
-                  )}
-                </p>
-              ))}
+              <p className="text-sm text-foreground">
+                Fire Safety Inspection: <span className="font-medium text-green-600">Current (expires 12/31/2026)</span>
+              </p>
+              <p className="text-sm text-foreground">
+                Health Department Inspection:{" "}
+                <span className="font-medium text-green-600">Current (expires 06/30/2026)</span>
+              </p>
             </div>
           </div>
         </div>
