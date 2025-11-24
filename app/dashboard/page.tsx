@@ -205,7 +205,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-4 gap-6" data-tour="dashboard-metrics">
             <RevenueAtRiskCard locked />
             <CredentialingPipelineCard totalPayers={metrics.payerCount} loading={metrics.loading} />
             <ExpiringSoonCard total={metrics.expiringCount} loading={metrics.loading} />
