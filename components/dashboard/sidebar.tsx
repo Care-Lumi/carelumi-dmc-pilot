@@ -185,16 +185,6 @@ export function Sidebar() {
             </Link>
 
             {/* Log Out */}
-            {/* <button
-              className={cn(
-                "w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                collapsed && "justify-center",
-              )}
-              title={collapsed ? "Log Out" : undefined}
-            >
-              <LogOut className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>Log Out</span>}
-            </button> */}
           </div>
         </div>
       </aside>

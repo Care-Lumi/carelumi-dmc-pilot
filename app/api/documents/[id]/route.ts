@@ -5,9 +5,9 @@ import { del } from "@vercel/blob"
 export const runtime = "nodejs"
 
 // DELETE /api/documents/[id] - Delete a document
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // First, get the document to retrieve the blob URL
     const [document] = await sql`
