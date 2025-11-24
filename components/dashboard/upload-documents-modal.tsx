@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { Upload, FileText, Loader2, CheckCircle2, XCircle, Edit2, AlertTriangle } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface UploadDocumentsModalProps {
   isOpen: boolean
@@ -35,6 +36,8 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
     isDuplicate: boolean
     existingDocument?: any
   } | null>(null)
+
+  const { toast } = useToast()
 
   if (!isOpen) return null
 
@@ -94,6 +97,18 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
       })
 
       const result = await response.json()
+
+      if (!response.ok) {
+        toast({
+          title: "Classification Failed",
+          description: result.error || "Unable to process document. AI services may be temporarily unavailable.",
+          variant: "destructive",
+        })
+        setUploadStatus("error")
+        setErrorMessage(result.error || "Failed to process document")
+        return
+      }
+
       setClassification(result)
 
       console.log("[v0] Full Gemini classification result:", JSON.stringify(result, null, 2))
@@ -145,6 +160,11 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
       setUploadStatus("results")
     } catch (error: any) {
       console.error("[v0] Upload error:", error)
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Network error. Please check your connection and try again.",
+        variant: "destructive",
+      })
       setUploadStatus("error")
       setErrorMessage(error.message || "Failed to process document")
     }
@@ -228,10 +248,8 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
       setUploadStatus("success")
       onUploadSuccess?.(data.document)
 
-      // After 2 seconds, check if there are more files
       setTimeout(() => {
         if (currentFileIndex < selectedFiles.length - 1) {
-          // Process next file
           setCurrentFileIndex((prev) => prev + 1)
           setUploadStatus("idle")
           setIsEditing(false)
@@ -239,13 +257,17 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
         } else {
           setTimeout(() => {
             handleClose()
-            // Signal parent to refresh data
             window.dispatchEvent(new CustomEvent("documentsUpdated"))
           }, 1000)
         }
       }, 2000)
     } catch (error: any) {
       console.error("[v0] Save error:", error)
+      toast({
+        title: "Save Failed",
+        description: error.message || "Unable to save document. Please try again.",
+        variant: "destructive",
+      })
       setUploadStatus("error")
       setErrorMessage(error.message || "Failed to save document")
     }

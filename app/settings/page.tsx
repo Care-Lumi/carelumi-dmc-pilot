@@ -255,7 +255,6 @@ export default function SettingsPage() {
                   <Button variant="outline" onClick={handleCancel}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSave}>Save Changes</Button>
                 </div>
               </CardContent>
             </Card>
@@ -317,9 +316,6 @@ export default function SettingsPage() {
                 <div className="flex justify-end gap-3 pt-4">
                   <Button variant="outline" onClick={handleCancel}>
                     Cancel
-                  </Button>
-                  <Button className="bg-[#0066FF] hover:bg-[#0052CC]" onClick={handleSave}>
-                    Save Changes
                   </Button>
                 </div>
               </CardContent>

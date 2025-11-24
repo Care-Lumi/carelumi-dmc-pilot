@@ -15,13 +15,14 @@ import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
-  LogOut,
+  MessageSquare,
+  Phone,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
-import { Orb } from "@/components/ui/orb"
+import { ClipVoiceModal } from "@/components/dashboard/clip-voice-modal"
 import { userData } from "@/lib/dmc-pilot-data"
 
 const SidebarContext = createContext<{ collapsed: boolean }>({ collapsed: false })
@@ -43,6 +44,7 @@ const navigationItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const [showClipChat, setShowClipChat] = useState(false)
+  const [showClipVoice, setShowClipVoice] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -62,6 +64,10 @@ export function Sidebar() {
 
   const handleClipClick = () => {
     setShowClipChat(true)
+  }
+
+  const handleVoiceClick = () => {
+    setShowClipVoice(true)
   }
 
   return (
@@ -150,10 +156,19 @@ export function Sidebar() {
               title="Chat with Clip"
               onClick={handleClipClick}
             >
-              <div className="relative flex h-8 w-8 items-center justify-center">
-                <Orb colors={["#F6E7D8", "#E0CFC2"]} agentState={null} className="h-8 w-8" />
-              </div>
+              <MessageSquare className="h-5 w-5 shrink-0" />
               {!collapsed && <span className="text-sm">Chat with Clip</span>}
+            </Button>
+
+            {/* Talk with Clip */}
+            <Button
+              variant="outline"
+              className={cn("w-full justify-start gap-3 relative", collapsed && "justify-center px-0")}
+              title="Talk with Clip"
+              onClick={handleVoiceClick}
+            >
+              <Phone className="h-5 w-5 shrink-0" />
+              {!collapsed && <span className="text-sm">Talk with Clip</span>}
             </Button>
 
             {/* Settings */}
@@ -170,7 +185,7 @@ export function Sidebar() {
             </Link>
 
             {/* Log Out */}
-            <button
+            {/* <button
               className={cn(
                 "w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
                 collapsed && "justify-center",
@@ -179,11 +194,12 @@ export function Sidebar() {
             >
               <LogOut className="h-5 w-5 shrink-0" />
               {!collapsed && <span>Log Out</span>}
-            </button>
+            </button> */}
           </div>
         </div>
       </aside>
       <ClipChatModal isOpen={showClipChat} onClose={() => setShowClipChat(false)} />
+      <ClipVoiceModal isOpen={showClipVoice} onClose={() => setShowClipVoice(false)} />
     </SidebarContext.Provider>
   )
 }

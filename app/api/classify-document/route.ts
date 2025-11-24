@@ -52,6 +52,15 @@ If the document contains licenses for multiple different people:
 
 If you cannot determine a field, make your best educated guess based on context. Be precise with dates and numbers.`
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs),
+    ),
+  ])
+}
+
 async function classifyWithGemini(file: File, base64Data: string, mimeType: string) {
   const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error("Gemini API key not configured")
@@ -152,37 +161,50 @@ export async function POST(request: NextRequest) {
     let usedProvider = "Gemini"
 
     try {
-      console.log("[v0] Attempting classification with Gemini...")
-      responseText = await classifyWithGemini(file, base64Data, mimeType)
+      console.log("[CareLumi] Attempting classification with Gemini...")
+      responseText = await withTimeout(classifyWithGemini(file, base64Data, mimeType), 15000)
+      console.log(`[CareLumi] Successfully classified with ${usedProvider}`)
     } catch (geminiError) {
-      console.warn(
-        "[v0] Gemini failed, trying OpenAI...",
-        geminiError instanceof Error ? geminiError.message : geminiError,
-      )
+      console.error("[CareLumi] Gemini classification failed:", {
+        error: geminiError instanceof Error ? geminiError.message : "Unknown error",
+        file: file.name,
+        timestamp: new Date().toISOString(),
+      })
 
       try {
         usedProvider = "OpenAI"
-        responseText = await classifyWithOpenAI(base64Data, mimeType)
+        console.log("[CareLumi] Attempting classification with OpenAI...")
+        responseText = await withTimeout(classifyWithOpenAI(base64Data, mimeType), 15000)
+        console.log(`[CareLumi] Successfully classified with ${usedProvider}`)
       } catch (openaiError) {
-        console.warn(
-          "[v0] OpenAI failed, trying Claude...",
-          openaiError instanceof Error ? openaiError.message : openaiError,
-        )
+        console.error("[CareLumi] OpenAI classification failed:", {
+          error: openaiError instanceof Error ? openaiError.message : "Unknown error",
+          file: file.name,
+          timestamp: new Date().toISOString(),
+        })
 
         try {
           usedProvider = "Claude"
-          responseText = await classifyWithClaude(base64Data, mimeType)
+          console.log("[CareLumi] Attempting classification with Claude...")
+          responseText = await withTimeout(classifyWithClaude(base64Data, mimeType), 15000)
+          console.log(`[CareLumi] Successfully classified with ${usedProvider}`)
         } catch (claudeError) {
-          console.error(
-            "[v0] All AI providers failed",
-            claudeError instanceof Error ? claudeError.message : claudeError,
-          )
-          throw new Error("All AI classification services are unavailable. Please try again later.")
+          console.error("[CareLumi] All AI providers failed:", {
+            error: claudeError instanceof Error ? claudeError.message : "Unknown error",
+            file: file.name,
+            timestamp: new Date().toISOString(),
+          })
+          throw new Error("AI services temporarily unavailable. Please try again in a few moments.")
         }
       }
     }
 
-    console.log(`[v0] Successfully classified document using ${usedProvider}`)
+    console.log("[CareLumi] Document classified successfully:", {
+      provider: usedProvider,
+      filename: file.name,
+      fileSize: `${(file.size / 1024).toFixed(2)}KB`,
+      timestamp: new Date().toISOString(),
+    })
 
     // Parse JSON from response
     let classification
@@ -195,7 +217,11 @@ export async function POST(request: NextRequest) {
 
       classification = JSON.parse(cleanedText)
     } catch (parseError) {
-      console.error("[v0] Failed to parse AI response:", responseText)
+      console.error("[CareLumi] Failed to parse AI response:", {
+        rawResponse: responseText,
+        file: file.name,
+        timestamp: new Date().toISOString(),
+      })
       return NextResponse.json(
         {
           error: "Failed to classify document. Please try again or contact support.",
@@ -239,7 +265,11 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error("[v0] Document classification error:", error)
+    console.error("[CareLumi] Document classification error:", {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    })
 
     return NextResponse.json(
       {

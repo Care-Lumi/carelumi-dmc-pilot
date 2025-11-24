@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/google": "2.0.42",
     "@google/generative-ai": "latest",
     "@hookform/resolvers": "^3.10.0",
     "@neondatabase/serverless": "latest",
@@ -62,6 +63,7 @@
     "react-day-picker": "latest",
     "react-dom": "19.2.0",
     "react-hook-form": "latest",
+    "react-markdown": "latest",
     "react-native": "latest",
     "react-resizable-panels": "latest",
     "recharts": "latest",

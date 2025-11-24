@@ -311,9 +311,9 @@ function StaffCredentialsContent() {
                     <div>Actions</div>
                   </div>
 
-                  {filteredStaff.map((staff, index) => (
+                  {filteredStaff.map((staff) => (
                     <div
-                      key={index}
+                      key={staff.name}
                       className="grid grid-cols-[2fr_1fr_1.5fr_1fr] gap-4 border-b border-border px-6 py-4 last:border-0"
                     >
                       <div>
