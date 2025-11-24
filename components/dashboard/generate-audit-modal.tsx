@@ -11,6 +11,7 @@ export function GenerateAuditModal({ isOpen, onClose }: GenerateAuditModalProps)
   const [step, setStep] = useState(1)
   const [selectedAuditType, setSelectedAuditType] = useState("")
   const [selectedFormat, setSelectedFormat] = useState("zip")
+  const [showUpsellModal, setShowUpsellModal] = useState(false)
 
   if (!isOpen) return null
 
@@ -21,6 +22,17 @@ export function GenerateAuditModal({ isOpen, onClose }: GenerateAuditModalProps)
     { id: "payer", name: "Payer-Specific", description: "Insurance payer credentialing package" },
     { id: "custom", name: "Custom Upload", description: "Based on uploaded auditor requirements" },
   ]
+
+  const handleUpgrade = () => {
+    setShowUpsellModal(true)
+  }
+
+  const handleCloseUpsell = () => {
+    setShowUpsellModal(false)
+    onClose()
+    setStep(1)
+    setSelectedAuditType("")
+  }
 
   const handleGeneratePackage = () => {
     // Simulate package generation
@@ -35,11 +47,21 @@ export function GenerateAuditModal({ isOpen, onClose }: GenerateAuditModalProps)
       {/* Backdrop */}
       <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
 
-      {/* Modal */}
+      {/* Main Modal */}
       <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-3xl max-h-[700px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-white shadow-lg overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border p-6 bg-gray-50">
-          <h2 className="text-xl font-semibold text-foreground">Generate Audit Package {step === 2 && "- Review"}</h2>
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">
+              Preview Audit Package (Sandbox) {step === 2 && "- Review"}
+            </h2>
+            {step === 1 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                This is an example audit package using Texas ASC sandbox data. Generating real audit packages is
+                available on paid plans.
+              </p>
+            )}
+          </div>
           <button
             onClick={() => {
               onClose()
@@ -59,7 +81,7 @@ export function GenerateAuditModal({ isOpen, onClose }: GenerateAuditModalProps)
           {step === 1 ? (
             <div>
               <p className="mb-6 text-sm text-muted-foreground">
-                Select the type of audit package you want to generate:
+                Select the type of audit package you want to preview:
               </p>
               <div className="space-y-3">
                 {auditTypes.map((type) => (
@@ -91,6 +113,21 @@ export function GenerateAuditModal({ isOpen, onClose }: GenerateAuditModalProps)
             </div>
           ) : (
             <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700 border border-amber-200">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Sample data · Not based on your uploaded documents
+              </div>
+
+              <p className="mb-6 text-sm text-muted-foreground">
+                This example shows what a CareLumi audit package could include for a multi-site ASC in Texas.
+              </p>
+
               <div className="mb-6 rounded-lg bg-gray-50 p-4 border border-gray-200">
                 <h3 className="mb-2 font-semibold text-foreground">Package Contents</h3>
                 <div className="flex items-center gap-4 text-sm">
@@ -250,15 +287,59 @@ export function GenerateAuditModal({ isOpen, onClose }: GenerateAuditModalProps)
               </button>
             ) : (
               <button
-                onClick={handleGeneratePackage}
+                onClick={handleUpgrade}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
               >
-                Generate & Download
+                Upgrade to Generate Real Audits
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {showUpsellModal && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/50" onClick={handleCloseUpsell} />
+          <div className="fixed left-1/2 top-1/2 z-[60] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-white shadow-lg p-6">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
+              <svg
+                className="h-6 w-6 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Real Audit Generation Available on Paid Plans
+            </h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              In the full version of CareLumi, this button will generate a complete audit binder from your documents in
+              one click. In this pilot, you can explore the sample checklist on the Audit Readiness page.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCloseUpsell}
+                className="flex-1 rounded-md border border-border bg-white px-4 py-2 text-sm font-medium text-foreground hover:bg-gray-100 transition-colors"
+              >
+                Got it
+              </button>
+              <button
+                onClick={() => window.open("mailto:hello@carelumi.com?subject=Audit Generation Inquiry", "_blank")}
+                className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+              >
+                Contact Sales
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }

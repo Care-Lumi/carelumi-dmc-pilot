@@ -2,209 +2,31 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { UploadAuditorRequirementsModal } from "@/components/dashboard/upload-auditor-requirements-modal"
-import { GenerateAuditModal } from "@/components/dashboard/generate-audit-modal"
+import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
+import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
+import { SANDBOX_AUDIT_MISSING, SANDBOX_AUDIT_COMPLETE_ITEMS } from "@/lib/data/sandbox-data"
 
 type AuditType = "general" | "state" | "fire" | "payer" | "custom"
 
-interface ChecklistItem {
-  id: string
-  category: string
-  item: string
-  status: "complete" | "incomplete"
-  action?: string
-  auditTypes: AuditType[]
-}
+const completeItemsFromSandbox = SANDBOX_AUDIT_COMPLETE_ITEMS.map((item, index) => ({
+  id: `c${index + 1}`,
+  category: "Compliance",
+  item: item,
+  status: "complete" as const,
+  auditTypes: ["general" as const],
+}))
 
-const allItems: ChecklistItem[] = [
-  // Staff (7)
-  {
-    id: "s1",
-    category: "Staff",
-    item: "Current professional licenses verified",
-    status: "complete",
-    auditTypes: ["general", "state", "payer"],
-  },
-  {
-    id: "s2",
-    category: "Staff",
-    item: "Required certifications on file",
-    status: "incomplete",
-    action: "Upload 2 missing CPR certifications",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "s3",
-    category: "Staff",
-    item: "Background checks completed",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "s4",
-    category: "Staff",
-    item: "TB test results documented",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "s5",
-    category: "Staff",
-    item: "Mandatory training completed",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  { id: "s6", category: "Staff", item: "CEU requirements met", status: "complete", auditTypes: ["general", "payer"] },
-  {
-    id: "s7",
-    category: "Staff",
-    item: "Professional liability insurance active",
-    status: "complete",
-    auditTypes: ["general", "payer"],
-  },
-
-  // Facility (7)
-  {
-    id: "f1",
-    category: "Facility",
-    item: "Facility license current",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "f2",
-    category: "Facility",
-    item: "Fire safety inspection passed",
-    status: "complete",
-    auditTypes: ["general", "fire"],
-  },
-  {
-    id: "f3",
-    category: "Facility",
-    item: "Health inspection current",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "f4",
-    category: "Facility",
-    item: "Certificate of occupancy valid",
-    status: "complete",
-    auditTypes: ["general", "state", "fire"],
-  },
-  {
-    id: "f5",
-    category: "Facility",
-    item: "Liability insurance policy active",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "f6",
-    category: "Facility",
-    item: "Workers compensation coverage verified",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "f7",
-    category: "Facility",
-    item: "Emergency evacuation plan documented",
-    status: "incomplete",
-    action: "Update and upload current evacuation plan",
-    auditTypes: ["general", "fire"],
-  },
-
-  // Documentation (7)
-  {
-    id: "d1",
-    category: "Documentation",
-    item: "Personnel files complete",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "d2",
-    category: "Documentation",
-    item: "Patient consent forms updated",
-    status: "complete",
-    auditTypes: ["general"],
-  },
-  {
-    id: "d3",
-    category: "Documentation",
-    item: "HIPAA compliance documentation",
-    status: "complete",
-    auditTypes: ["general", "payer"],
-  },
-  {
-    id: "d4",
-    category: "Documentation",
-    item: "Incident reports filed appropriately",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "d5",
-    category: "Documentation",
-    item: "Policy and procedure manuals current",
-    status: "complete",
-    auditTypes: ["general", "state"],
-  },
-  {
-    id: "d6",
-    category: "Documentation",
-    item: "Quality improvement reports",
-    status: "complete",
-    auditTypes: ["general", "payer"],
-  },
-  {
-    id: "d7",
-    category: "Documentation",
-    item: "Medical records audit completed",
-    status: "complete",
-    auditTypes: ["general", "payer"],
-  },
-
-  // Payer (4)
-  {
-    id: "p1",
-    category: "Payer",
-    item: "Active payer contracts on file",
-    status: "complete",
-    auditTypes: ["general", "payer"],
-  },
-  {
-    id: "p2",
-    category: "Payer",
-    item: "Provider enrollment IDs verified",
-    status: "complete",
-    auditTypes: ["general", "payer"],
-  },
-  {
-    id: "p3",
-    category: "Payer",
-    item: "Re-credentialing dates tracked",
-    status: "incomplete",
-    action: "Schedule re-credentialing for 3 providers",
-    auditTypes: ["general", "payer"],
-  },
-  {
-    id: "p4",
-    category: "Payer",
-    item: "CAQH profiles up to date",
-    status: "complete",
-    auditTypes: ["general", "payer"],
-  },
-]
+const allItems = [...SANDBOX_AUDIT_MISSING, ...completeItemsFromSandbox]
 
 function AuditReadinessContent() {
   const [selectedAuditType, setSelectedAuditType] = useState<AuditType>("general")
   const [showComplete, setShowComplete] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showAuditModal, setShowAuditModal] = useState(false)
+  const [showUploadOverlay, setShowUploadOverlay] = useState(false)
+  const [showAuditOverlay, setShowAuditOverlay] = useState(false)
 
   // Filter items by selected audit type
   const filteredItems = allItems.filter((item) => item.auditTypes.includes(selectedAuditType))
@@ -223,13 +45,15 @@ function AuditReadinessContent() {
     custom: "Custom Upload",
   }
 
-  const handleAuditUploadComplete = (auditType: string, results: { met: number; missing: number }) => {
-    console.log("[v0] Custom audit uploaded:", auditType, results)
-    // In a real implementation, this would add the new audit type to the system
-  }
-
   return (
     <div className="min-h-screen bg-background">
+      <SandboxPageOverlay
+        pageKey="audit-readiness"
+        title="Preview an audit checklist in sandbox mode"
+        description="This page is showing an example audit checklist and findings so you can see the type of gaps CareLumi highlights before an audit. In your trial, we use your uploads to understand your documents, but full audit checklists and packages are only available on paid plans."
+        featureName="Audit"
+      />
+
       <Sidebar />
       <TopNav />
 
@@ -246,13 +70,13 @@ function AuditReadinessContent() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => setShowUploadModal(true)}
+                onClick={() => setShowUploadOverlay(true)}
                 className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
                 Upload Auditor Requirements
               </button>
               <button
-                onClick={() => setShowAuditModal(true)}
+                onClick={() => setShowAuditOverlay(true)}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Generate Audit Package
@@ -389,12 +213,20 @@ function AuditReadinessContent() {
         </div>
       </main>
 
-      <UploadAuditorRequirementsModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        onComplete={handleAuditUploadComplete}
-      />
-      <GenerateAuditModal isOpen={showAuditModal} onClose={() => setShowAuditModal(false)} />
+      {showUploadOverlay && (
+        <UpgradeOverlay
+          feature="upload-auditor-requirements"
+          title="Contact Sales to Upgrade"
+          description="Upload custom auditor requirements and generate tailored compliance checklists. Contact our sales team to unlock this premium feature."
+        />
+      )}
+      {showAuditOverlay && (
+        <UpgradeOverlay
+          feature="generate-audit-package"
+          title="Contact Sales to Upgrade"
+          description="Generate comprehensive audit packages with all required documentation. Contact our sales team to unlock this premium feature."
+        />
+      )}
     </div>
   )
 }

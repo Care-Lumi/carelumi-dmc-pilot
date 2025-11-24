@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
@@ -9,21 +11,29 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
 import { Building2, User } from "lucide-react"
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState("profile")
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
   const [adminProfile, setAdminProfile] = useState({
-    firstName: "Kiley",
-    lastName: "Russell",
-    email: "kiley.russell@kemittherapy.com",
-    phone: "(708) 555-0192",
-    jobTitle: "Clinic Director",
-    department: "Administration",
-    bio: "Alex Chen is a dedicated Compliance Administrator at Kemit Therapy with extensive experience in healthcare regulatory management. Alex specializes in ensuring organizational compliance with state and federal regulations, managing credentialing workflows, and implementing efficient compliance tracking systems.",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    jobTitle: "",
+    department: "",
+  })
+
+  const [orgSettings, setOrgSettings] = useState({
+    name: "",
+    type: "",
+    taxId: "",
+    npi: "",
+    address: "",
   })
 
   const tabs = [
@@ -37,6 +47,77 @@ export default function SettingsPage() {
       setActiveTab(tabParam)
     }
   }, [searchParams])
+
+  const handleSave = () => {
+    // TODO: Implement save to database
+    console.log("Saving settings:", { adminProfile, orgSettings })
+  }
+
+  const handleCancel = () => {
+    // Reset to empty or refetch from database
+    if (activeTab === "profile") {
+      setAdminProfile({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        jobTitle: "",
+        department: "",
+      })
+      setAvatarUrl(null) // Reset avatar URL on cancel
+    } else {
+      setOrgSettings({
+        name: "",
+        type: "",
+        taxId: "",
+        npi: "",
+        address: "",
+      })
+    }
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file")
+      return
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File size must be less than 2MB")
+      return
+    }
+
+    setIsUploadingAvatar(true)
+
+    try {
+      // Upload to Blob storage
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload-avatar", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error("Upload failed")
+      }
+
+      const { url } = await response.json()
+      setAvatarUrl(url)
+      console.log("[v0] Avatar uploaded successfully:", url)
+    } catch (error) {
+      console.error("[v0] Avatar upload error:", error)
+      alert("Failed to upload avatar. Please try again.")
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -82,12 +163,34 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-[#0066FF] flex items-center justify-center text-white text-2xl font-semibold">
-                    AR
-                  </div>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl || "/placeholder.svg"}
+                      alt="Avatar"
+                      className="w-20 h-20 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-[#0066FF] flex items-center justify-center text-white text-2xl font-semibold">
+                      {adminProfile.firstName && adminProfile.lastName
+                        ? `${adminProfile.firstName[0]}${adminProfile.lastName[0]}`
+                        : "?"}
+                    </div>
+                  )}
                   <div>
-                    <Button variant="outline" size="sm">
-                      Change Avatar
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("avatar-upload")?.click()}
+                      disabled={isUploadingAvatar}
+                    >
+                      {isUploadingAvatar ? "Uploading..." : "Change Avatar"}
                     </Button>
                     <p className="text-xs text-muted-foreground mt-1">JPG, PNG or GIF. Max size 2MB</p>
                   </div>
@@ -99,6 +202,7 @@ export default function SettingsPage() {
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">First Name</Label>
                     <Input
+                      placeholder="Enter first name"
                       value={adminProfile.firstName}
                       onChange={(e) => setAdminProfile({ ...adminProfile, firstName: e.target.value })}
                     />
@@ -106,6 +210,7 @@ export default function SettingsPage() {
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Last Name</Label>
                     <Input
+                      placeholder="Enter last name"
                       value={adminProfile.lastName}
                       onChange={(e) => setAdminProfile({ ...adminProfile, lastName: e.target.value })}
                     />
@@ -113,6 +218,7 @@ export default function SettingsPage() {
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Email Address</Label>
                     <Input
+                      placeholder="Enter email"
                       value={adminProfile.email}
                       type="email"
                       onChange={(e) => setAdminProfile({ ...adminProfile, email: e.target.value })}
@@ -121,6 +227,7 @@ export default function SettingsPage() {
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Phone Number</Label>
                     <Input
+                      placeholder="Enter phone number"
                       value={adminProfile.phone}
                       type="tel"
                       onChange={(e) => setAdminProfile({ ...adminProfile, phone: e.target.value })}
@@ -129,6 +236,7 @@ export default function SettingsPage() {
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Job Title</Label>
                     <Input
+                      placeholder="Enter job title"
                       value={adminProfile.jobTitle}
                       onChange={(e) => setAdminProfile({ ...adminProfile, jobTitle: e.target.value })}
                     />
@@ -136,23 +244,18 @@ export default function SettingsPage() {
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Department</Label>
                     <Input
+                      placeholder="Enter department"
                       value={adminProfile.department}
                       onChange={(e) => setAdminProfile({ ...adminProfile, department: e.target.value })}
                     />
                   </div>
                 </div>
 
-                <Separator />
-
-                <div>
-                  <Label className="text-[13px] font-medium text-[#333333] mb-2">Bio</Label>
-                  <Textarea value={adminProfile.bio} readOnly className="min-h-[100px] bg-[#f9fafb]" />
-                  <p className="text-xs text-muted-foreground mt-1">Generated by Clip AI</p>
-                </div>
-
-                <div className="flex justify-end gap-3">
-                  <Button variant="outline">Cancel</Button>
-                  <Button>Save Changes</Button>
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave}>Save Changes</Button>
                 </div>
               </CardContent>
             </Card>
@@ -171,38 +274,57 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Organization Name</Label>
-                    <Input value="Kemit Therapy" readOnly className="bg-[#f9fafb]" />
+                    <Input
+                      placeholder="Enter organization name"
+                      value={orgSettings.name}
+                      onChange={(e) => setOrgSettings({ ...orgSettings, name: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Organization Type</Label>
                     <Input
-                      value="Behavioral, Occupational and Speech Therapy Clinic"
-                      readOnly
-                      className="bg-[#f9fafb]"
+                      placeholder="Enter organization type"
+                      value={orgSettings.type}
+                      onChange={(e) => setOrgSettings({ ...orgSettings, type: e.target.value })}
                     />
                   </div>
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Tax ID</Label>
-                    <Input value="**-***4782" readOnly className="bg-[#f9fafb]" />
+                    <Input
+                      placeholder="Enter Tax ID"
+                      value={orgSettings.taxId}
+                      onChange={(e) => setOrgSettings({ ...orgSettings, taxId: e.target.value })}
+                    />
                   </div>
                   <div>
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">NPI Number</Label>
-                    <Input value="1234567890" readOnly className="bg-[#f9fafb]" />
+                    <Input
+                      placeholder="Enter NPI number"
+                      value={orgSettings.npi}
+                      onChange={(e) => setOrgSettings({ ...orgSettings, npi: e.target.value })}
+                    />
                   </div>
                   <div className="col-span-2">
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Business Address</Label>
-                    <Input value="1820 Ridge Rd, Homewood, IL 60430" readOnly className="bg-[#f9fafb]" />
+                    <Input
+                      placeholder="Enter business address"
+                      value={orgSettings.address}
+                      onChange={(e) => setOrgSettings({ ...orgSettings, address: e.target.value })}
+                    />
                   </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                  <Button className="bg-[#0066FF] hover:bg-[#0052CC]" onClick={handleSave}>
+                    Save Changes
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           )}
-
-          {/* Save Button */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline">Cancel</Button>
-            <Button className="bg-[#0066FF] hover:bg-[#0052CC]">Save Changes</Button>
-          </div>
         </div>
       </main>
     </div>

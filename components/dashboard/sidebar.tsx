@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -15,7 +14,6 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  MessageCircle,
   DollarSign,
   LogOut,
 } from "lucide-react"
@@ -23,15 +21,16 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
+import { Orb } from "@/components/ui/orb"
 import { userData } from "@/lib/dmc-pilot-data"
 
 const navigationItems = [
   { name: "Home", href: "/dashboard", icon: Home },
   { name: "Staff Licenses", href: "/staff", icon: Users },
+  { name: "Documents & Reports", href: "/documents", icon: FolderOpen },
   { name: "Payer Credentialing", href: "/payers", icon: ShieldCheck },
   { name: "Facilities", href: "/facilities", icon: Building2 },
   { name: "Regulatory Updates", href: "/regulatory", icon: FileText },
-  { name: "Documents & Reports", href: "/documents", icon: FolderOpen },
   { name: "Billing Compliance", href: "/revenue-risk", icon: DollarSign },
 ]
 
@@ -41,7 +40,6 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
 
-  // Get user initials
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -56,8 +54,8 @@ export function Sidebar() {
     }, 100)
   }
 
-  const handleAdminClick = () => {
-    router.push("/settings?tab=admin")
+  const handleClipClick = () => {
+    setShowClipChat(true)
   }
 
   return (
@@ -93,6 +91,13 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={handleNavigation}
+                data-tour={
+                  item.name === "Staff Licenses"
+                    ? "staff-nav"
+                    : item.name === "Documents & Reports"
+                      ? "documents-nav"
+                      : undefined
+                }
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                   isActive
@@ -111,16 +116,13 @@ export function Sidebar() {
 
         <div className="border-t border-border p-2 space-y-2">
           {/* Admin Profile - clickable to go to settings admin tab */}
-          <button
-            onClick={handleAdminClick}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-              collapsed && "justify-center",
-            )}
-            title={collapsed ? "Admin Profile" : undefined}
+          <div
+            className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm", collapsed && "justify-center")}
           >
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs">{getInitials(userData.name)}</AvatarFallback>
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                {getInitials(userData.name)}
+              </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex-1 truncate text-left">
@@ -128,17 +130,18 @@ export function Sidebar() {
                 <p className="text-xs text-muted-foreground">{userData.role}</p>
               </div>
             )}
-          </button>
+          </div>
 
           {/* Chat with Clip */}
           <Button
+            data-tour="clip-trigger"
             variant="outline"
-            className={cn("w-full justify-start gap-3", collapsed && "justify-center px-0")}
+            className={cn("w-full justify-start gap-3 relative", collapsed && "justify-center px-0")}
             title="Chat with Clip"
-            onClick={() => setShowClipChat(true)}
+            onClick={handleClipClick}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <MessageCircle className="h-4 w-4" />
+            <div className="relative flex h-8 w-8 items-center justify-center">
+              <Orb colors={["#F6E7D8", "#E0CFC2"]} agentState={null} className="h-8 w-8" />
             </div>
             {!collapsed && <span className="text-sm">Chat with Clip</span>}
           </Button>

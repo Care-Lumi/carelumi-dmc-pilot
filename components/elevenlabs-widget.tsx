@@ -10,57 +10,94 @@ interface ElevenLabsWidgetProps {
 export function ElevenLabsWidget({ isOpen, onClose }: ElevenLabsWidgetProps) {
   const widgetContainerRef = useRef<HTMLDivElement>(null)
   const [agentId, setAgentId] = useState<string>("")
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string>("")
 
   useEffect(() => {
+    console.log("[v0] Fetching ElevenLabs config...")
     fetch("/api/elevenlabs-config")
       .then((res) => res.json())
-      .then((data) => setAgentId(data.agentId))
-      .catch((err) => console.error("Failed to load ElevenLabs config:", err))
+      .then((data) => {
+        console.log("[v0] ElevenLabs agent ID:", data.agentId)
+        setAgentId(data.agentId)
+      })
+      .catch((err) => {
+        console.error("[v0] Failed to load ElevenLabs config:", err)
+        setError("Failed to load voice assistant configuration")
+        setIsLoading(false)
+      })
   }, [])
 
   useEffect(() => {
-    if (!isOpen || !agentId || typeof window === "undefined") return
+    if (!isOpen || !agentId || typeof window === "undefined") {
+      console.log("[v0] Widget init skipped:", { isOpen, agentId, window: typeof window })
+      return
+    }
 
-    // Load ElevenLabs Conversational AI script
+    const isV0Dev = window.location.hostname.includes("v0.app") || window.location.hostname.includes("v0-preview")
+
+    if (isV0Dev) {
+      console.log("[v0] Running in v0 development - ElevenLabs widget requires production deployment")
+      setError("Voice assistant requires production deployment to function. Deploy to Vercel to test voice features.")
+      setIsLoading(false)
+      return
+    }
+
+    console.log("[v0] Loading ElevenLabs widget script...")
+    setIsLoading(true)
+
     const script = document.createElement("script")
     script.src = "https://elevenlabs.io/convai-widget/index.js"
     script.async = true
 
     script.onload = () => {
-      // Initialize widget when script loads
-      if (window.ConvaiWidget && widgetContainerRef.current) {
-        window.ConvaiWidget.init({
-          agentId: agentId,
+      console.log("[v0] ElevenLabs script loaded")
 
-          // Widget configuration
-          mode: "inline", // Embed in our modal instead of floating button
+      setTimeout(() => {
+        if (window.ConvaiWidget && widgetContainerRef.current) {
+          console.log("[v0] Initializing ConvaiWidget...")
+          try {
+            window.ConvaiWidget.init({
+              agentId: agentId,
+              mode: "inline",
+              primaryColor: "#E0CFC2",
+              defaultOpen: true,
+              onReady: () => {
+                console.log("[v0] Clip voice agent ready!")
+                setIsLoading(false)
+              },
+              onError: (error: Error) => {
+                console.error("[v0] ElevenLabs widget error:", error)
+                setError("Voice assistant failed to load")
+                setIsLoading(false)
+              },
+            })
+          } catch (err) {
+            console.error("[v0] Failed to initialize widget:", err)
+            setError("Failed to initialize voice assistant")
+            setIsLoading(false)
+          }
+        } else {
+          console.error("[v0] ConvaiWidget not available or container missing")
+          setError("Voice assistant not available")
+          setIsLoading(false)
+        }
+      }, 500) // Wait 500ms for widget to be available
+    }
 
-          // Visual customization (match Vercel blue design)
-          primaryColor: "#3b82f6",
-
-          // Auto-open when modal opens
-          defaultOpen: true,
-
-          // Callbacks
-          onReady: () => {
-            console.log("Clip is ready!")
-          },
-          onError: (error: Error) => {
-            console.error("ElevenLabs widget error:", error)
-          },
-        })
-      }
+    script.onerror = () => {
+      console.error("[v0] Failed to load ElevenLabs script")
+      setError("Failed to load voice assistant script")
+      setIsLoading(false)
     }
 
     document.body.appendChild(script)
 
     return () => {
-      // Cleanup: remove script when component unmounts
+      console.log("[v0] Cleaning up ElevenLabs widget...")
       if (document.body.contains(script)) {
         document.body.removeChild(script)
       }
-
-      // Cleanup ElevenLabs widget instance
       if (window.ConvaiWidget?.destroy) {
         window.ConvaiWidget.destroy()
       }
@@ -70,48 +107,39 @@ export function ElevenLabsWidget({ isOpen, onClose }: ElevenLabsWidgetProps) {
   if (!isOpen) return null
 
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} aria-hidden="true" />
+    <div className="flex flex-col h-full w-full">
+      {isLoading && (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-sm text-muted-foreground">Loading voice assistant...</p>
+          </div>
+        </div>
+      )}
 
-      {/* Modal */}
-      <div className="fixed right-6 top-6 bottom-6 z-50 w-full max-w-2xl rounded-lg border border-border bg-card shadow-lg flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">C</span>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground">Ask Clip</h2>
-              <p className="text-xs text-muted-foreground">AI Compliance Assistant</p>
+      {error && (
+        <div className="flex items-center justify-center h-full p-8">
+          <div className="text-center max-w-md space-y-4">
+            <div className="text-6xl">🎤</div>
+            <h3 className="text-lg font-semibold">Voice Assistant Unavailable</h3>
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
+              <strong>Development Note:</strong> The ElevenLabs voice widget requires deployment to a production
+              environment with proper domain configuration. Push your changes to Vercel to test the full voice
+              conversation experience.
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Close chat"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
+      )}
 
-        {/* ElevenLabs Widget Container */}
-        <div ref={widgetContainerRef} className="flex-1 overflow-hidden" id="elevenlabs-widget-container">
-          {/* ElevenLabs widget will be injected here */}
-        </div>
-
-        {/* Footer hint */}
-        <div className="border-t border-border px-6 py-3 bg-muted/30">
-          <p className="text-xs text-muted-foreground text-center">
-            💡 <strong>Tip:</strong> Ask about credentialing requirements, multi-state expansion, or document upload
-            help
-          </p>
-        </div>
+      <div
+        ref={widgetContainerRef}
+        className="flex-1 w-full h-full overflow-hidden rounded-lg bg-background"
+        id="elevenlabs-widget-container"
+      >
+        {/* ElevenLabs widget will be injected here */}
       </div>
-    </>
+    </div>
   )
 }
 

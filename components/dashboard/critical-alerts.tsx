@@ -1,95 +1,129 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { MoreVertical } from "lucide-react"
+import { RenewalStepsModal } from "./renewal-steps-modal"
 
-export function CriticalAlerts() {
-  const router = useRouter()
+type CriticalAlert = {
+  id: string
+  type: "license_expiring" | "license_expired"
+  owner_name: string
+  document_type: string
+  expiration_date: string
+  days_until_expiration: number | null
+  license_number: string | null
+  jurisdiction: string | null
+  urgency_level: "critical" | "high"
+}
 
-  const samuelAlert = {
-    id: "samuel-license",
-    type: "error" as const,
-    badge: "Critical",
-    title: "Samuel Osei Boateng - License Expiring in <60 Days",
-    subtitle: "Illinois OTA License expires 12/31/2025",
-    actionText: "Review & Renew",
-    actionType: "primary" as const,
+interface CriticalAlertsProps {
+  alerts: CriticalAlert[]
+}
+
+export function CriticalAlerts({ alerts }: CriticalAlertsProps) {
+  const [selectedLicense, setSelectedLicense] = useState<any>(null)
+  const [showRenewalModal, setShowRenewalModal] = useState(false)
+
+  const hasAlerts = alerts && alerts.length > 0
+
+  const handleViewRenewal = (alert: CriticalAlert) => {
+    setSelectedLicense({
+      id: alert.id,
+      owner_name: alert.owner_name,
+      document_type: alert.document_type,
+      expiration_date: alert.expiration_date,
+      days_until_expiration: alert.days_until_expiration,
+      license_number: alert.license_number,
+      jurisdiction: alert.jurisdiction,
+      urgency_level: alert.urgency_level,
+    })
+    setShowRenewalModal(true)
   }
 
-  const otherAlerts = [
-    {
-      id: "regulatory-medicaid",
-      type: "error" as const,
-      badge: "Critical",
-      title: "Illinois Medicaid - New Documentation Requirements",
-      subtitle: "Effective 12/1/2025 • Affects 15 staff members at Chicago location",
-      actionText: "View Details",
-      actionType: "primary" as const,
-    },
-    {
-      id: "county-care",
-      type: "warning" as const,
-      badge: "Warning",
-      title: "County Care - Re-attestation due in 7 days",
-      subtitle: "CAQH profile needs attestation",
-      actionText: "Attest Now",
-      actionType: "secondary" as const,
-    },
-  ]
-
-  const alerts = [samuelAlert, ...otherAlerts]
-
   return (
-    <div className="mt-8">
-      <h2 className="text-[18px] font-semibold mb-4 text-[#333333]">Critical Alerts</h2>
-      <div className="space-y-3">
-        {alerts.map((alert) => (
-          <div
-            key={alert.id}
-            className="bg-white border border-[#e5e7eb] rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow flex items-center gap-4"
-          >
-            <span
-              className={`inline-flex items-center px-3 py-1 rounded-full font-semibold whitespace-nowrap text-xs ${
-                alert.type === "error"
-                  ? "bg-red-100 text-red-800 border border-red-200"
-                  : alert.type === "warning"
-                    ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                    : "bg-blue-100 text-blue-800 border border-blue-200"
-              }
-            `}
-            >
-              {alert.badge}
-            </span>
+    <>
+      <div className="space-y-4">
+        <h2 className="text-2xl font-semibold text-foreground">Action Items</h2>
 
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold mb-1 text-gray-900 text-base">{alert.title}</div>
-              <div className="text-gray-600 text-sm">{alert.subtitle}</div>
-            </div>
+        {hasAlerts ? (
+          <div className="space-y-3">
+            {alerts.map((alert) => {
+              const isExpired = alert.days_until_expiration !== null && alert.days_until_expiration < 0
+              const severityBadge = alert.urgency_level === "critical" || isExpired ? "Critical" : "Warning"
+              const badgeColor =
+                severityBadge === "Critical"
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : "bg-yellow-50 text-yellow-700 border-yellow-200"
+              const actionButtonColor =
+                severityBadge === "Critical"
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-white text-foreground border border-border hover:bg-muted"
 
-            <button
-              onClick={() => {
-                if (alert.id === "samuel-license") {
-                  router.push("/staff")
-                } else if (alert.id === "county-care") {
-                  alert("Attestation modal will be triggered")
-                } else if (alert.id === "regulatory-medicaid") {
-                  router.push("/regulatory")
-                }
-              }}
-              className={`
-                inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium 
-                whitespace-nowrap transition-all
-                ${
-                  alert.actionType === "primary"
-                    ? "bg-primary text-white hover:bg-primary/90 shadow-sm"
-                    : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                }
-              `}
-            >
-              {alert.actionText}
-            </button>
+              const subtitle = [
+                alert.jurisdiction,
+                alert.license_number ? `#${alert.license_number}` : null,
+                `Due ${new Date(alert.expiration_date).toLocaleDateString()}`,
+              ]
+                .filter(Boolean)
+                .join(" • ")
+
+              return (
+                <div
+                  key={alert.id}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-border bg-white p-4"
+                >
+                  {/* Left: Severity Badge */}
+                  <div className="flex-shrink-0">
+                    <span
+                      className={`inline-flex items-center rounded-md border px-3 py-1 text-xs font-medium ${badgeColor}`}
+                    >
+                      {severityBadge}
+                    </span>
+                  </div>
+
+                  {/* Middle: Alert Details */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground">
+                      {alert.owner_name} - License expires in {Math.abs(alert.days_until_expiration || 0)} days
+                    </p>
+                    <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
+                  </div>
+
+                  {/* Right: Action Buttons */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleViewRenewal(alert)}
+                      className={`rounded-md px-4 py-2 text-sm font-medium ${actionButtonColor}`}
+                    >
+                      Review & Renew
+                    </button>
+                    <button className="text-muted-foreground hover:text-foreground p-2">
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        ))}
+        ) : (
+          <div className="rounded-lg border border-border bg-white p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              You're all caught up. Everything is on track. We will notify you here when items need attention.
+            </p>
+          </div>
+        )}
       </div>
-    </div>
+
+      {showRenewalModal && selectedLicense && (
+        <RenewalStepsModal
+          isOpen={showRenewalModal}
+          onClose={() => {
+            setShowRenewalModal(false)
+            setSelectedLicense(null)
+          }}
+          license={selectedLicense}
+        />
+      )}
+    </>
   )
 }

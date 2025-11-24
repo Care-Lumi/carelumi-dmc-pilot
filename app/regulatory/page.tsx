@@ -6,9 +6,10 @@ import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { ClipActionModal } from "@/components/dashboard/modals/clip-action-modal"
-import { regulatoryUpdates } from "@/lib/placeholder-data"
+import { SANDBOX_REGULATORY_UPDATES } from "@/lib/data/sandbox-data"
 import { ChevronLeft, Mic } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 
 const setClipContext = (context) => {
   // Placeholder for setClipContext implementation
@@ -28,11 +29,13 @@ function RegulatoryUpdatesContent() {
   const [showClipModal, setShowClipModal] = useState(false)
   const [selectedUpdate, setSelectedUpdate] = useState<any>(null)
 
+  const regulatoryUpdates = SANDBOX_REGULATORY_UPDATES
+
   const totalUpdates = regulatoryUpdates.length
   const criticalPending = regulatoryUpdates.filter((u) => u.type === "critical").length
   const requiresDocumentation = regulatoryUpdates.filter((u) => u.documentsMissing.length > 0).length
 
-  const locations = ["all", "Chicago - Main", "Naperville", "Oak Park"]
+  const locations = ["all", "DMC Austin Surgery Center", "DMC San Marcos ASC"]
 
   // Filter updates based on selections
   const filteredUpdates = regulatoryUpdates.filter((update) => {
@@ -51,6 +54,13 @@ function RegulatoryUpdatesContent() {
 
   return (
     <div className="min-h-screen bg-background relative">
+      <SandboxPageOverlay
+        pageKey="regulatory-updates"
+        title="Preview Regulatory Updates in sandbox mode"
+        description="This page shows sample federal and state updates so you can see how CareLumi surfaces critical changes and tracks required documentation. In your trial, your uploaded documents are stored in Documents & Reports. Live regulatory monitoring is available on paid plans."
+        featureName="Regulatory"
+      />
+
       <Sidebar />
       <TopNav />
 
@@ -137,9 +147,9 @@ function RegulatoryUpdatesContent() {
               className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="all">All Sources</option>
-              <option value="Illinois DCFS">Illinois DCFS</option>
+              <option value="Texas Medicaid">Texas Medicaid</option>
               <option value="CMS">CMS</option>
-              <option value="Illinois State Fire Marshal">IL Fire Marshal</option>
+              <option value="Texas DSHS">Texas DSHS</option>
             </select>
           </div>
 
@@ -210,7 +220,7 @@ function RegulatoryUpdatesContent() {
             setShowClipModal(false)
             setSelectedUpdate(null)
           }}
-          provider="Illinois Healthcare"
+          provider="DMC Surgery Centers"
           payer={selectedUpdate.source}
           status={selectedUpdate.title}
         />

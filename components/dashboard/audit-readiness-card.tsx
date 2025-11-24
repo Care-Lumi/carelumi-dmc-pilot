@@ -1,26 +1,20 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
-import { HelpCircle } from "lucide-react"
+import { HelpCircle, Lock } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface AuditReadinessCardProps {
   className?: string
-  percentage?: number
-  itemsNeedingAttention?: number
+  locked?: boolean
 }
 
-export function AuditReadinessCard({ className, percentage = 87, itemsNeedingAttention = 3 }: AuditReadinessCardProps) {
-  const router = useRouter()
-
+export function AuditReadinessCard({ className, locked = false }: AuditReadinessCardProps) {
   return (
     <TooltipProvider>
       <Card className={cn("h-[220px] rounded-[12px] border border-border bg-white shadow-sm", className)}>
         <CardContent className="flex h-full flex-col justify-between p-6">
-          {/* Label */}
           <div className="flex items-center gap-2">
             <p className="text-xs font-semibold tracking-wide text-muted-foreground">AUDIT READINESS</p>
             <Tooltip>
@@ -33,17 +27,27 @@ export function AuditReadinessCard({ className, percentage = 87, itemsNeedingAtt
             </Tooltip>
           </div>
 
-          {/* KPI + small text */}
           <div className="mt-4 space-y-1">
-            <p className="font-semibold text-green-600 text-3xl">{percentage}%</p>
-            <p className="text-sm font-medium text-green-600">{itemsNeedingAttention} Items to Review Before Audit</p>
+            {locked ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-3xl text-muted-foreground">—</p>
+                  <Lock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">Available on paid plans</p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-green-600 text-3xl">0%</p>
+                <p className="text-sm font-medium text-green-600">Upload documents to calculate</p>
+              </>
+            )}
           </div>
 
-          {/* Button */}
           <div className="pt-2">
-            <Button size="sm" variant="outline" onClick={() => router.push("/audit-readiness")}>
-              VIEW CHECKLIST
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              Trial includes a sandbox audit example. Full audit readiness scoring is available on paid plans.
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -5,10 +5,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
-import { facilities } from "@/lib/placeholder-data"
+import { SANDBOX_FACILITIES } from "@/lib/data/sandbox-data"
 import { ChevronLeft, Mic } from "lucide-react"
 import { AddLocationModal } from "@/components/dashboard/add-location-modal"
+import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 
 export default function FacilitiesPage() {
   return <FacilitiesContent />
@@ -19,6 +21,8 @@ function FacilitiesContent() {
   const [showExpansionModal, setShowExpansionModal] = useState(false)
   const [selectedState, setSelectedState] = useState("")
   const [showAddLocationModal, setShowAddLocationModal] = useState(false)
+  const [showAddLocationOverlay, setShowAddLocationOverlay] = useState(false)
+  const [showExpandStateOverlay, setShowExpandStateOverlay] = useState(false)
   const [locationFilter, setLocationFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -26,27 +30,30 @@ function FacilitiesContent() {
     window.scrollTo(0, 0)
   }, [])
 
+  const facilities = SANDBOX_FACILITIES
+
   const filteredFacilities = locationFilter === "all" ? facilities : facilities.filter((f) => f.id === locationFilter)
 
   const totalFacilities = facilities.length
-  const uniqueStates = 1 // Changed uniqueStates from 3 to 1 since only operating in IL
+  const uniqueStates = 1 // Texas only
   const upcomingExpirations = facilities.reduce((count, facility) => {
     const expiringLicenses = facility.licenses.filter((license) => {
       const expiresAt = new Date(license.expiresAt)
       const daysUntil = Math.floor((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       return daysUntil <= 90
     })
-    const expiringInspections = facility.inspections.filter((inspection) => {
-      if (inspection.status === "scheduled") return false
-      const expiresAt = new Date(inspection.expiresAt)
-      const daysUntil = Math.floor((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      return daysUntil <= 90
-    })
-    return count + expiringLicenses.length + expiringInspections.length
+    return count + expiringLicenses.length
   }, 0)
 
   return (
     <div className="min-h-screen bg-background">
+      <SandboxPageOverlay
+        pageKey="facilities"
+        title="Preview Facility Compliance in sandbox mode"
+        description="This page shows example facilities, addresses, and license statuses so you can see how CareLumi manages multiple locations. During your trial, your real facility documents are stored in Documents & Reports. Facility dashboards unlock on paid plans."
+        featureName="Facility"
+      />
+
       <Sidebar />
       <TopNav />
 
@@ -81,13 +88,13 @@ function FacilitiesContent() {
                 ))}
               </select>
               <button
-                onClick={() => setShowAddLocationModal(true)}
+                onClick={() => setShowAddLocationOverlay(true)}
                 className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
                 + Add Location
               </button>
               <button
-                onClick={() => setShowExpansionModal(true)}
+                onClick={() => setShowExpandStateOverlay(true)}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
               >
                 Expand to New State
@@ -159,26 +166,46 @@ function FacilitiesContent() {
               <tbody>
                 {filteredFacilities
                   .filter((facility) => facility.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((facility) => (
-                    <tr key={facility.id} className="border-b border-border last:border-0">
-                      <td className="px-6 py-4 text-sm font-medium text-foreground">{facility.name}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{facility.address}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="font-medium text-green-600">
-                          {facility.status.charAt(0).toUpperCase() + facility.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-foreground">{facility.licenses.length} active</td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => router.push(`/facilities/${facility.id}`)}
-                          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  .map((facility) => {
+                    const expiringLicenses = facility.licenses.filter((license) => {
+                      const expiresAt = new Date(license.expiresAt)
+                      const daysUntil = Math.floor((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                      return daysUntil <= 90 && daysUntil > 0
+                    })
+
+                    let licenseDescription = `${facility.licenses.length} active`
+                    if (expiringLicenses.length > 0) {
+                      licenseDescription += ` · ${expiringLicenses.length} expiring in ${Math.floor((new Date(expiringLicenses[0].expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days`
+                    }
+                    if (facility.status === "missing-docs") {
+                      licenseDescription += ` · Fire inspection missing`
+                    }
+
+                    return (
+                      <tr key={facility.id} className="border-b border-border last:border-0">
+                        <td className="px-6 py-4 text-sm font-medium text-foreground">{facility.name}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">{facility.address}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`font-medium ${facility.statusColor}`}>
+                            {facility.status === "compliant"
+                              ? "Compliant"
+                              : facility.status === "at-risk"
+                                ? "At Risk"
+                                : "Missing Docs"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-foreground">{licenseDescription}</td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => router.push(`/facilities/${facility.id}`)}
+                            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
               </tbody>
             </table>
           </div>
@@ -295,6 +322,20 @@ function FacilitiesContent() {
         </div>
       )}
 
+      {showAddLocationOverlay && (
+        <UpgradeOverlay
+          feature="add-location"
+          title="Contact Sales to Upgrade"
+          description="Add new facility locations and automatically track their compliance requirements. Contact our sales team to unlock this premium feature."
+        />
+      )}
+      {showExpandStateOverlay && (
+        <UpgradeOverlay
+          feature="expand-to-new-state"
+          title="Contact Sales to Upgrade"
+          description="Get AI-powered state expansion guidance with automated checklists and compliance tracking. Contact our sales team to unlock this premium feature."
+        />
+      )}
       <AddLocationModal isOpen={showAddLocationModal} onClose={() => setShowAddLocationModal(false)} />
     </div>
   )

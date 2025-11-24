@@ -4,14 +4,16 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
-import { HelpCircle } from "lucide-react"
+import { HelpCircle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ExpiringSoonCardProps {
   className?: string
+  total?: number
+  loading?: boolean
 }
 
-export function ExpiringSoonCard({ className }: ExpiringSoonCardProps) {
+export function ExpiringSoonCard({ className, total = 0, loading = false }: ExpiringSoonCardProps) {
   const router = useRouter()
 
   return (
@@ -31,13 +33,29 @@ export function ExpiringSoonCard({ className }: ExpiringSoonCardProps) {
           </div>
 
           <div className="mt-4 space-y-1">
-            <p className="font-semibold text-foreground text-3xl">5 Docs</p>
-            <p className="text-sm font-medium text-primary">Out of Compliance</p>
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading...</p>
+              </div>
+            ) : total === 0 ? (
+              <>
+                <p className="font-semibold text-foreground text-3xl">0 Docs</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  We'll show upcoming expirations after you upload documents
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-foreground text-3xl">{total} Docs</p>
+                <p className="text-sm font-medium text-muted-foreground">Counts based on your uploaded documents.</p>
+              </>
+            )}
           </div>
 
           <div className="pt-2">
-            <Button size="sm" variant="outline" asChild>
-              <a href="/documents">TAKE ACTION</a>
+            <Button size="sm" variant="outline" onClick={() => router.push("/documents")}>
+              VIEW DOCUMENTS
             </Button>
           </div>
         </CardContent>

@@ -1,23 +1,16 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
-import { HelpCircle } from "lucide-react"
+import { HelpCircle, Lock } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface RevenueAtRiskCardProps {
-  amount: number
-  providerCount: number
-  trend?: number
-  status: "high" | "medium" | "low"
+  locked?: boolean
   className?: string
 }
 
-export function RevenueAtRiskCard({ amount, providerCount, status, className }: RevenueAtRiskCardProps) {
-  const router = useRouter()
-
+export function RevenueAtRiskCard({ locked = false, className }: RevenueAtRiskCardProps) {
   return (
     <TooltipProvider>
       <Card className={cn("h-[220px] rounded-[12px] border border-border shadow-sm", className)}>
@@ -35,16 +28,26 @@ export function RevenueAtRiskCard({ amount, providerCount, status, className }: 
           </div>
 
           <div className="mt-4 space-y-1">
-            <p className="font-semibold text-3xl text-foreground text-black">${amount.toLocaleString()}</p>
-            <p className="text-sm font-medium text-primary">
-              {providerCount} {providerCount === 1 ? "Provider" : "Providers"} Unable to Bill
-            </p>
+            {locked ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-3xl text-muted-foreground">—</p>
+                  <Lock className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground">Available on paid plans</p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-3xl text-foreground">$0</p>
+                <p className="text-sm font-medium text-primary">No providers unable to bill</p>
+              </>
+            )}
           </div>
 
           <div className="pt-2">
-            <Button size="sm" variant="outline" onClick={() => router.push("/revenue-risk")}>
-              VIEW DETAILS
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              Trial includes a sandbox billing example. Revenue tracking unlocks on paid plans.
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -2,185 +2,162 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
-import { GenerateAuditModal } from "@/components/dashboard/generate-audit-modal"
 import { UploadDocumentsModal } from "@/components/dashboard/upload-documents-modal"
+import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ChevronLeft, Building2, UserCheck, BookOpen, X, Check, AlertTriangle, Search } from "lucide-react"
-import Image from "next/image"
+import { ChevronLeft, Building2, UserCheck, BookOpen, X, Search, UploadIcon } from "lucide-react"
 
-const allDocuments = [
-  {
-    id: 1,
-    name: "Samuel Osei Boateng - IL OTA License",
-    category: "Staff Credentials",
-    status: "expired",
-    expiryDate: "10/15/2025",
-    staffMember: "Samuel Osei Boateng",
-  },
-  {
-    id: 2,
-    name: "Dr. Sarah Martinez - IL LSW License",
-    category: "Staff Credentials",
-    status: "expiring",
-    expiryDate: "12/31/2025",
-    staffMember: "Dr. Sarah Martinez",
-  },
-  {
-    id: 3,
-    name: "Marcus Johnson - CPR Certificate",
-    category: "Staff Credentials",
-    status: "expiring",
-    expiryDate: "12/20/2025",
-    staffMember: "Marcus Johnson",
-  },
-  {
-    id: 4,
-    name: "County Care - Provider Agreement",
-    category: "Payer Contracts",
-    status: "missing",
-    expiryDate: "N/A",
-  },
-  {
-    id: 5,
-    name: "Meridian Health - Credentialing Application",
-    category: "Payer Contracts",
-    status: "expiring",
-    expiryDate: "12/25/2025",
-  },
-  {
-    id: 6,
-    name: "Chicago Main - IL Behavioral Health License",
-    category: "Facility Licenses",
-    status: "expired",
-    expiryDate: "09/30/2025",
-  },
-  {
-    id: 7,
-    name: "Naperville - Fire Safety Certificate",
-    category: "Facility Licenses",
-    status: "missing",
-    expiryDate: "N/A",
-  },
-  {
-    id: 8,
-    name: "Oak Park - Building Inspection Report",
-    category: "Facility Licenses",
-    status: "expiring",
-    expiryDate: "12/15/2025",
-  },
-  {
-    id: 9,
-    name: "Emergency Response Policy",
-    category: "Policies & SOPs",
-    status: "expiring",
-    expiryDate: "12/28/2025",
-  },
-  {
-    id: 10,
-    name: "Dr. Emily Chen - Background Check",
-    category: "Staff Credentials",
-    status: "missing",
-    expiryDate: "N/A",
-    staffMember: "Dr. Emily Chen",
-  },
-]
-
-const documentCategories = [
-  {
-    id: "staff",
-    name: "Staff Credentials",
-    description: "Licenses, certifications, and background checks.",
-    icon: UserCheck,
-    sources: ["TherapyNotes", "IDFPR Portal", "Manual Upload"],
-    checklistCta: "View checklist",
-    documentsCta: "View staff docs",
-    checklistItems: [
-      { label: "License on file", status: "complete" as const, count: 15 },
-      { label: "Background check", status: "warning" as const, count: 2, detail: "2 missing" },
-      { label: "TB test", status: "warning" as const, count: 1, detail: "1 expiring soon" },
-      { label: "CPR / First Aid", status: "complete" as const, count: 15 },
-      { label: "CEU certificates", status: "warning" as const, count: 3, detail: "3 missing" },
-    ],
-  },
-  {
-    id: "payer",
-    name: "Payer Contracts",
-    description: "Contracts, fee schedules, and credentialing packets.",
-    icon: Building2,
-    sources: ["CAQH", "Availity", "Payer portals"],
-    checklistCta: "View checklist",
-    documentsCta: "View payer docs",
-    checklistItems: [
-      { label: "Active contracts on file", status: "complete" as const, count: 5 },
-      { label: "Fee schedules current", status: "complete" as const, count: 5 },
-      { label: "Credentialing packets", status: "warning" as const, count: 1, detail: "1 in progress" },
-    ],
-  },
-  {
-    id: "facility",
-    name: "Facility Licenses",
-    description: "Site licenses, inspections, and safety certificates.",
-    icon: Building2,
-    sources: ["State portals", "City inspectors", "Manual upload"],
-    checklistCta: "View checklist",
-    documentsCta: "View facility docs",
-    checklistItems: [
-      { label: "Facility licenses current", status: "warning" as const, count: 1, detail: "1 expired" },
-      { label: "Fire safety inspection", status: "warning" as const, count: 1, detail: "1 missing" },
-      { label: "Building inspection", status: "warning" as const, count: 1, detail: "1 expiring soon" },
-    ],
-  },
-  {
-    id: "policies",
-    name: "Policies & SOPs",
-    description: "Internal policies, procedures, and onboarding docs.",
-    icon: BookOpen,
-    sources: ["Internal drive", "Manual upload"],
-    checklistCta: "View checklist",
-    documentsCta: "View policy docs",
-    checklistItems: [
-      { label: "Compliance policies", status: "complete" as const, count: 12 },
-      { label: "Staff onboarding docs", status: "complete" as const, count: 8 },
-      { label: "Audit procedures", status: "warning" as const, count: 1, detail: "1 update pending" },
-    ],
-  },
-]
+type Document = {
+  id: string
+  file_name: string
+  file_url: string
+  document_type: string
+  owner_name: string
+  owner_type: "staff" | "facility" | "payer" | "policy"
+  expiration_date: string | null
+  license_number: string | null
+  jurisdiction: string | null
+  created_at: string
+  status: "active" | "historical" // Added status field to Document type
+}
 
 function DocumentsContent() {
-  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
-  const [showGenerateModal, setShowGenerateModal] = useState(false)
+  const [showUpgradeOverlay, setShowUpgradeOverlay] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
-  const [showLicenseModal, setShowLicenseModal] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<"expired" | "missing" | "expiring" | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<string | null>("staff")
+  const [showDocumentModal, setShowDocumentModal] = useState(false)
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
+  const [statusFilter, setStatusFilter] = useState<"expired" | "expiring" | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>("all")
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
+
+  const fetchDocuments = async () => {
+    try {
+      const response = await fetch("/api/documents")
+      if (response.ok) {
+        const data = await response.json()
+        setDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error("[v0] Failed to fetch documents:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchDocuments()
+  }, [])
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchDocuments()
+    }
+    window.addEventListener("documentsUpdated", handleRefresh)
+    return () => window.removeEventListener("documentsUpdated", handleRefresh)
+  }, [])
 
   useEffect(() => {
     window.scrollTo(0, 0)
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search)
-      const staffFilter = params.get("staff")
-      if (staffFilter) {
-        setSelectedCategory("staff")
-      }
-    }
   }, [])
 
-  const expiredDocs = allDocuments.filter((d) => d.status === "expired").length
-  const missingDocs = allDocuments.filter((d) => d.status === "missing").length
-  const expiringDocs = allDocuments.filter((d) => d.status === "expiring").length
+  const getDocumentStatus = (expirationDate: string | null) => {
+    if (!expirationDate) return null
+    const expDate = new Date(expirationDate)
+    const now = new Date()
+    const daysUntilExpiry = Math.floor((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
-  const handleMetricCardClick = (type: "expired" | "missing" | "expiring") => {
+    if (daysUntilExpiry < 0) return "expired"
+    if (daysUntilExpiry <= 60) return "expiring"
+    return "valid"
+  }
+
+  const expiredDocs = documents.filter((d) => getDocumentStatus(d.expiration_date) === "expired").length
+  const expiringDocs = documents.filter((d) => getDocumentStatus(d.expiration_date) === "expiring").length
+
+  const handleMetricCardClick = (type: "expired" | "expiring") => {
     setStatusFilter(statusFilter === type ? null : type)
   }
 
-  const filteredDocuments = statusFilter ? allDocuments.filter((doc) => doc.status === statusFilter) : []
+  const filteredDocuments = documents.filter((doc) => {
+    const status = getDocumentStatus(doc.expiration_date)
+    const matchesStatus = !statusFilter || status === statusFilter
+    const matchesCategory = selectedCategory === "all" || doc.owner_type === selectedCategory
+    const matchesSearch =
+      !searchQuery ||
+      doc.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.owner_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.document_type.toLowerCase().includes(searchQuery.toLowerCase())
 
-  const selectedCategoryData = documentCategories.find((cat) => cat.id === selectedCategory)
+    return matchesStatus && matchesCategory && matchesSearch
+  })
+
+  const documentCategories = [
+    {
+      id: "all",
+      name: "All Documents",
+      description: "View all documents across categories",
+      icon: BookOpen,
+    },
+    {
+      id: "staff",
+      name: "Staff Credentials",
+      description: "Licenses, certifications, and background checks",
+      icon: UserCheck,
+    },
+    {
+      id: "facility",
+      name: "Facility Licenses",
+      description: "Site licenses, inspections, and safety certificates",
+      icon: Building2,
+    },
+    {
+      id: "payer",
+      name: "Payer Contracts",
+      description: "Contracts, fee schedules, and credentialing packets",
+      icon: Building2,
+    },
+    {
+      id: "policy",
+      name: "Policies & SOPs",
+      description: "Internal policies, procedures, and onboarding docs",
+      icon: BookOpen,
+    },
+  ]
+
+  const showEmptyState = !loading && documents.length === 0
+
+  const handleDelete = async (docId: string) => {
+    if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
+      return
+    }
+
+    setDeletingDocId(docId)
+    try {
+      const response = await fetch(`/api/documents/${docId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete document")
+      }
+
+      console.log("[v0] Document deleted successfully")
+      // Refresh documents list
+      await fetchDocuments()
+      // Notify other pages to refresh
+      window.dispatchEvent(new CustomEvent("documentsUpdated"))
+    } catch (error) {
+      console.error("[v0] Delete error:", error)
+      alert("Failed to delete document. Please try again.")
+    } finally {
+      setDeletingDocId(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -210,7 +187,7 @@ function DocumentsContent() {
                 Upload
               </button>
               <button
-                onClick={() => setShowGenerateModal(true)}
+                onClick={() => setShowUpgradeOverlay(true)}
                 className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Generate Audit
@@ -218,292 +195,224 @@ function DocumentsContent() {
             </div>
           </div>
 
-          {/* Metric Cards */}
-          <div className="mb-6 grid grid-cols-3 gap-6">
-            <Card
-              className={`cursor-pointer transition-all ${
-                statusFilter === "expired" ? "ring-2 ring-red-600 shadow-lg" : "hover:shadow-md"
-              }`}
-              onClick={() => handleMetricCardClick("expired")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Expired Documents</h3>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-left text-destructive-foreground">{expiredDocs}</div>
-                <p className="text-xs text-muted-foreground">need immediate attention</p>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={`cursor-pointer transition-all ${
-                statusFilter === "missing" ? "ring-2 ring-amber-600 shadow-lg" : "hover:shadow-md"
-              }`}
-              onClick={() => handleMetricCardClick("missing")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Missing Documents</h3>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-left text-destructive-foreground">{missingDocs}</div>
-                <p className="text-xs text-muted-foreground">not yet uploaded</p>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={`cursor-pointer transition-all ${
-                statusFilter === "expiring" ? "ring-2 ring-yellow-600 shadow-lg" : "hover:shadow-md"
-              }`}
-              onClick={() => handleMetricCardClick("expiring")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="text-sm font-medium">Expiring Soon</h3>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-left text-yellow-600">{expiringDocs}</div>
-                <p className="text-xs text-muted-foreground">within next 60 days</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {statusFilter && (
-            <Card className="mb-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-foreground capitalize">{statusFilter} Documents</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {filteredDocuments.length} document{filteredDocuments.length !== 1 ? "s" : ""} found
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setStatusFilter(null)}
-                    className="rounded-full p-1 hover:bg-muted transition-colors"
-                  >
-                    <X className="h-5 w-5 text-muted-foreground" />
-                  </button>
+          {showEmptyState && (
+            <Card className="py-16">
+              <CardContent className="flex flex-col items-center justify-center text-center">
+                <div className="rounded-full bg-primary/10 p-6 mb-4">
+                  <UploadIcon className="h-12 w-12 text-primary" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {filteredDocuments.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{doc.name}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <p className="text-sm text-muted-foreground">{doc.category}</p>
-                          {doc.staffMember && (
-                            <>
-                              <span className="text-muted-foreground">•</span>
-                              <p className="text-sm text-muted-foreground">{doc.staffMember}</p>
-                            </>
-                          )}
-                          {doc.expiryDate !== "N/A" && (
-                            <>
-                              <span className="text-muted-foreground">•</span>
-                              <p className="text-sm text-muted-foreground">Expires: {doc.expiryDate}</p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`text-sm font-medium ${
-                            doc.status === "expired"
-                              ? "text-red-600"
-                              : doc.status === "missing"
-                                ? "text-amber-600"
-                                : "text-yellow-600"
-                          }`}
-                        >
-                          {doc.status === "expired"
-                            ? "Expired"
-                            : doc.status === "missing"
-                              ? "Missing"
-                              : "Expiring Soon"}
-                        </span>
-                        <button
-                          onClick={() => {
-                            if (doc.id === 1) {
-                              // Samuel's OTA License
-                              setShowLicenseModal(true)
-                            } else if (doc.status === "missing") {
-                              setShowUploadModal(true)
-                            }
-                          }}
-                          className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-                        >
-                          {doc.status === "missing" ? "Upload" : "View"}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">No documents yet</h2>
+                <p className="text-muted-foreground mb-6 max-w-md">
+                  Upload your first document to get started. Our AI will automatically extract metadata like expiration
+                  dates, license numbers, and more.
+                </p>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="rounded-md bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  Upload Documents
+                </button>
               </CardContent>
             </Card>
           )}
 
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Document Repository</h2>
-            <p className="text-sm text-muted-foreground">Browse everything Clip has pulled in from your systems.</p>
-          </div>
-
-          <div className="mb-6 flex gap-3">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Search documents by name, type, or staff member..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-4 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-              <button className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground">
-                <Search className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 mb-6">
-            {documentCategories.map((category) => {
-              const Icon = category.icon
-              const isSelected = selectedCategory === category.id
-              return (
+          {!showEmptyState && (
+            <>
+              {/* Metric Cards */}
+              <div className="mb-6 grid grid-cols-2 gap-6">
                 <Card
-                  key={category.id}
                   className={`cursor-pointer transition-all ${
-                    isSelected ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"
+                    statusFilter === "expired" ? "ring-2 ring-red-600 shadow-lg" : "hover:shadow-md"
                   }`}
-                  onClick={() => setSelectedCategory(category.id)}
+                  onClick={() => handleMetricCardClick("expired")}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                        <Icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-foreground">{category.name}</h3>
-                        <p className="text-sm text-muted-foreground">{category.description}</p>
-                      </div>
-                    </div>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <h3 className="text-sm font-medium">Expired Documents</h3>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Sources</p>
-                      <div className="flex flex-wrap gap-2">
-                        {category.sources.map((source) => (
-                          <span
-                            key={source}
-                            className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground"
-                          >
-                            {source}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex gap-2"></div>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-left text-destructive-foreground">{expiredDocs}</div>
+                    <p className="text-xs text-muted-foreground">need immediate attention</p>
                   </CardContent>
                 </Card>
-              )
-            })}
-          </div>
 
-          {selectedCategoryData && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-foreground">{selectedCategoryData.name} checklist</h2>
-                    <p className="text-sm text-muted-foreground">Review what's complete and what needs attention</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                      onClick={() => setShowGenerateModal(true)}
+                <Card
+                  className={`cursor-pointer transition-all ${
+                    statusFilter === "expiring" ? "ring-2 ring-yellow-600 shadow-lg" : "hover:shadow-md"
+                  }`}
+                  onClick={() => handleMetricCardClick("expiring")}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <h3 className="text-sm font-medium">Expiring Soon</h3>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-left text-yellow-600">{expiringDocs}</div>
+                    <p className="text-xs text-muted-foreground">within next 60 days</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Search Bar */}
+              <div className="mb-6 flex gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search documents by name, type, or owner..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-4 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              {/* Category Filters */}
+              <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5 mb-6">
+                {documentCategories.map((category) => {
+                  const Icon = category.icon
+                  const isSelected = selectedCategory === category.id
+                  const categoryCount =
+                    category.id === "all"
+                      ? documents.length
+                      : documents.filter((d) => d.owner_type === category.id).length
+
+                  return (
+                    <Card
+                      key={category.id}
+                      className={`cursor-pointer transition-all ${
+                        isSelected ? "ring-2 ring-primary shadow-lg" : "hover:shadow-md"
+                      }`}
+                      onClick={() => setSelectedCategory(category.id)}
                     >
-                      Generate audit packet
-                    </button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="text-sm font-medium text-foreground mb-3">Required items</h3>
-                    <div className="space-y-2">
-                      {selectedCategoryData.checklistItems.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
-                        >
-                          <div className="flex items-center gap-3">
-                            {item.status === "complete" ? (
-                              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100">
-                                <Check className="h-3 w-3 text-green-600" />
-                              </div>
-                            ) : (
-                              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100">
-                                <AlertTriangle className="h-3 w-3 text-amber-600" />
-                              </div>
-                            )}
-                            <div>
-                              <p className="text-sm font-medium text-foreground">{item.label}</p>
-                              {item.detail && <p className="text-xs text-muted-foreground">{item.detail}</p>}
-                            </div>
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                            <Icon className="h-5 w-5 text-primary" />
                           </div>
-                          <span
-                            className={`text-sm font-medium ${
-                              item.status === "complete" ? "text-green-600" : "text-amber-600"
-                            }`}
-                          >
-                            {item.count} {item.status === "complete" ? "complete" : "items"}
-                          </span>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-foreground text-sm">{category.name}</h3>
+                            <p className="text-xs text-muted-foreground mt-1">{categoryCount} docs</p>
+                          </div>
                         </div>
-                      ))}
+                      </CardHeader>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              {/* Documents Table */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-foreground">
+                        {statusFilter
+                          ? `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Documents`
+                          : "All Documents"}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        {filteredDocuments.length} document{filteredDocuments.length !== 1 ? "s" : ""} found
+                      </p>
                     </div>
+                    {statusFilter && (
+                      <button
+                        onClick={() => setStatusFilter(null)}
+                        className="rounded-full p-1 hover:bg-muted transition-colors"
+                      >
+                        <X className="h-5 w-5 text-muted-foreground" />
+                      </button>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="border-b border-border">
+                        <tr className="text-left">
+                          <th className="pb-3 text-sm font-medium text-muted-foreground">Owner</th>
+                          <th className="pb-3 text-sm font-medium text-muted-foreground">Type</th>
+                          <th className="pb-3 text-sm font-medium text-muted-foreground">Jurisdiction</th>
+                          <th className="pb-3 text-sm font-medium text-muted-foreground">Expiration</th>
+                          <th className="pb-3 text-sm font-medium text-muted-foreground">License #</th>
+                          <th className="pb-3 text-sm font-medium text-muted-foreground">Uploaded</th>
+                          <th className="pb-3 text-sm font-medium text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredDocuments.map((doc) => {
+                          const status = getDocumentStatus(doc.expiration_date)
+                          return (
+                            <tr key={doc.id} className="border-b border-border last:border-0">
+                              <td className="py-3 text-sm font-medium text-foreground">
+                                {doc.owner_name}
+                                {doc.status === "historical" && (
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                    Historical
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 text-sm text-muted-foreground">{doc.document_type}</td>
+                              <td className="py-3 text-sm text-muted-foreground">{doc.jurisdiction || "—"}</td>
+                              <td className="py-3 text-sm">
+                                {doc.expiration_date ? (
+                                  <span
+                                    className={
+                                      status === "expired"
+                                        ? "text-red-600 font-medium"
+                                        : status === "expiring"
+                                          ? "text-yellow-600 font-medium"
+                                          : "text-muted-foreground"
+                                    }
+                                  >
+                                    {new Date(doc.expiration_date).toLocaleDateString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </td>
+                              <td className="py-3 text-sm text-muted-foreground">{doc.license_number || "—"}</td>
+                              <td className="py-3 text-sm text-muted-foreground">
+                                {new Date(doc.created_at).toLocaleDateString()}
+                              </td>
+                              <td className="py-3">
+                                <div className="flex items-center gap-3">
+                                  <a
+                                    href={doc.file_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline"
+                                  >
+                                    View
+                                  </a>
+                                  <button
+                                    onClick={() => handleDelete(doc.id)}
+                                    disabled={deletingDocId === doc.id}
+                                    className="text-sm text-red-600 hover:text-red-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Delete document"
+                                  >
+                                    {deletingDocId === doc.id ? "Deleting..." : "Delete"}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
       </main>
 
-      <Dialog open={showLicenseModal} onOpenChange={setShowLicenseModal}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Samuel Osei Boateng - IL OTA License</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-lg border border-border overflow-hidden">
-              <Image
-                src="/images/samuel-ota-license.jpg"
-                alt="Samuel Osei Boateng Illinois OTA License"
-                width={800}
-                height={1000}
-                className="w-full h-auto"
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowLicenseModal(false)}
-                className="flex-1 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-              >
-                Close
-              </button>
-              <button className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-                Download
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {showUploadModal && <UploadDocumentsModal isOpen={showUploadModal} onClose={() => setShowUploadModal(false)} />}
-      {showGenerateModal && (
-        <GenerateAuditModal isOpen={showGenerateModal} onClose={() => setShowGenerateModal(false)} />
+      {showUpgradeOverlay && (
+        <UpgradeOverlay
+          feature="generate-audit"
+          title="Contact Sales to Upgrade"
+          description="Generate comprehensive audit packets with AI-powered document organization. Contact our sales team to unlock this premium feature."
+        />
       )}
     </div>
   )

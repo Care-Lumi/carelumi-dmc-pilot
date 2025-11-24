@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { ChevronLeft, Search, Mic, RefreshCcw, HelpCircle } from "lucide-react"
-import { revenueAtRiskDetails } from "@/lib/placeholder-data"
+import { SANDBOX_BILLING_COMPLIANCE } from "@/lib/data/sandbox-data"
 import { ClipActionModal } from "@/components/dashboard/modals/clip-action-modal"
+import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 
 function RevenueRiskContent() {
   const router = useRouter()
@@ -20,7 +21,9 @@ function RevenueRiskContent() {
   const [providerFilter, setProviderFilter] = useState("all")
   const [payerFilter, setPayerFilter] = useState("all")
   const [clipModalOpen, setClipModalOpen] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<(typeof revenueAtRiskDetails)[0] | null>(null)
+  const [selectedItem, setSelectedItem] = useState<(typeof SANDBOX_BILLING_COMPLIANCE)[0] | null>(null)
+
+  const revenueAtRiskDetails = SANDBOX_BILLING_COMPLIANCE
 
   const totalAtRisk = revenueAtRiskDetails.reduce((sum, item) => sum + item.atRisk, 0)
   const totalProviders = new Set(revenueAtRiskDetails.map((item) => item.provider)).size
@@ -52,13 +55,20 @@ function RevenueRiskContent() {
     }
   }
 
-  const handleUseClip = (item: (typeof revenueAtRiskDetails)[0]) => {
+  const handleUseClip = (item: (typeof SANDBOX_BILLING_COMPLIANCE)[0]) => {
     setSelectedItem(item)
     setClipModalOpen(true)
   }
 
   return (
     <div className="min-h-screen bg-background">
+      <SandboxPageOverlay
+        pageKey="billing-compliance"
+        title="Try Billing Compliance in sandbox mode"
+        description="This page is using example data so you can see how CareLumi tracks blocked revenue and credentialing delays. During your trial, your real documents are stored in Documents & Reports, and billing breakdowns stay sandbox-only."
+        featureName="Billing"
+      />
+
       <Sidebar />
       <TopNav />
       <main className="ml-60 mt-16 p-12">

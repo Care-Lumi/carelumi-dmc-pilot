@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
-import { payerCredentialing } from "@/lib/placeholder-data"
+import { SANDBOX_PAYERS } from "@/lib/data/sandbox-data"
 import { ChevronLeft, Mic } from "lucide-react"
-import { AddPayerModal } from "@/components/dashboard/add-payer-modal"
+import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
+import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 
 export default function PayerCredentialingPage() {
   return <PayerCredentialingContent />
@@ -21,11 +22,14 @@ function PayerCredentialingContent() {
   const [typeFilter, setTypeFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddPayerModal, setShowAddPayerModal] = useState(false)
+  const [showAddPayerOverlay, setShowAddPayerOverlay] = useState(false)
   const [showClipModal, setShowClipModal] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
+
+  const payerCredentialing = SANDBOX_PAYERS
 
   const filteredPayers = payerCredentialing.filter((payer) => {
     const matchesStatus = statusFilter === "all" || payer.status === statusFilter
@@ -49,6 +53,13 @@ function PayerCredentialingContent() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SandboxPageOverlay
+        pageKey="payer-credentialing"
+        title="Preview Payer Credentialing in sandbox mode"
+        description="This page is using example data to demonstrate how CareLumi tracks payer contracts, application stages, and 'needing attention' items. In your trial, we store your real payer documents in Documents & Reports. Managing live applications here is available on paid plans."
+        featureName="Payer"
+      />
+
       <Sidebar />
       <TopNav />
 
@@ -68,7 +79,7 @@ function PayerCredentialingContent() {
               <p className="text-sm text-muted-foreground mt-1">Manage payer contracts and provider applications</p>
             </div>
             <button
-              onClick={() => setShowAddPayerModal(true)}
+              onClick={() => setShowAddPayerOverlay(true)}
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               + Add Payer
@@ -104,7 +115,7 @@ function PayerCredentialingContent() {
                 <CardTitle className="text-sm font-medium">Needing Attention</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-left text-destructive-foreground">2</div>
+                <div className="text-2xl font-bold text-left text-destructive-foreground">{missingDocsPayers}</div>
                 <p className="text-xs text-muted-foreground">Require provider or admin action</p>
               </CardContent>
             </Card>
@@ -168,18 +179,11 @@ function PayerCredentialingContent() {
             </div>
 
             {filteredPayers.map((payer) => {
-              let stage = ""
+              const stage = payer.stage
               let actionLabel = "View"
 
-              if (payer.status === "active") {
-                stage = "Rate Negotiation"
-              } else if (payer.status === "in-progress") {
-                stage = "Waiting on Payer"
-              } else if (payer.status === "missing-documents") {
-                stage = "Waiting on Provider"
+              if (payer.status === "missing-documents") {
                 actionLabel = "Upload Documents"
-              } else if (payer.status === "submitted") {
-                stage = "Initial Application"
               }
 
               return (
@@ -206,26 +210,7 @@ function PayerCredentialingContent() {
                     <span className="text-sm text-foreground">{stage}</span>
                   </div>
                   <div className="flex items-center">
-                    {payer.status === "active" && payer.approvedDate && (
-                      <span className="text-sm text-foreground">
-                        Approved {new Date(payer.approvedDate).toLocaleDateString()}
-                      </span>
-                    )}
-                    {payer.status === "in-progress" && payer.submittedDate && (
-                      <span className="text-sm text-foreground">
-                        Waiting for Payer – uploaded {new Date(payer.submittedDate).toLocaleDateString()}
-                      </span>
-                    )}
-                    {payer.status === "missing-documents" && payer.submittedDate && (
-                      <span className="text-sm text-foreground">
-                        Missing documents – uploaded {new Date(payer.submittedDate).toLocaleDateString()}
-                      </span>
-                    )}
-                    {payer.status === "submitted" && payer.submittedDate && (
-                      <span className="text-sm text-foreground">
-                        Application submitted {new Date(payer.submittedDate).toLocaleDateString()}
-                      </span>
-                    )}
+                    <span className="text-sm text-foreground">{payer.lastUpdate}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -242,7 +227,13 @@ function PayerCredentialingContent() {
         </div>
       </main>
 
-      <AddPayerModal isOpen={showAddPayerModal} onClose={() => setShowAddPayerModal(false)} />
+      {showAddPayerOverlay && (
+        <UpgradeOverlay
+          feature="add-payer"
+          title="Contact Sales to Upgrade"
+          description="Add new payers and automatically start credentialing workflows. Contact our sales team to unlock this premium feature."
+        />
+      )}
       <ClipChatModal
         isOpen={showClipModal}
         onClose={() => setShowClipModal(false)}

@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { AddProviderToPayerModal } from "@/components/dashboard/add-provider-to-payer-modal"
-import { ReCredentialModal } from "@/components/dashboard/re-credential-modal"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
+import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { UserPlus, RefreshCw, ChevronLeft } from "lucide-react"
 import { payerCredentialing } from "@/lib/placeholder-data"
 import Link from "next/link"
@@ -26,6 +26,8 @@ function PayerDetailContent({ params }: { params: { id: string } }) {
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
   const [showClipModal, setShowClipModal] = useState(false)
   const [showHireModal, setShowHireModal] = useState(false)
+  const [showReCredentialOverlay, setShowReCredentialOverlay] = useState(false)
+  const [showHireSpecialistOverlay, setShowHireSpecialistOverlay] = useState(false)
 
   useEffect(() => {
     setPayerId(params.id)
@@ -93,7 +95,7 @@ function PayerDetailContent({ params }: { params: { id: string } }) {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add Provider to Payer
               </Button>
-              <Button variant="outline" onClick={() => setShowReCredentialModal(true)}>
+              <Button variant="outline" onClick={() => setShowReCredentialOverlay(true)}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Re-Credential
               </Button>
@@ -192,7 +194,7 @@ function PayerDetailContent({ params }: { params: { id: string } }) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setShowClipModal(true)}>Use Clip AI</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowHireModal(true)}>
+                            <DropdownMenuItem onClick={() => setShowHireSpecialistOverlay(true)}>
                               Hire Specialist ($65/hr)
                             </DropdownMenuItem>
                             {payer.status === "Missing Documents" && (
@@ -236,7 +238,7 @@ function PayerDetailContent({ params }: { params: { id: string } }) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setShowClipModal(true)}>Use Clip AI</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setShowHireModal(true)}>
+                            <DropdownMenuItem onClick={() => setShowHireSpecialistOverlay(true)}>
                               Hire Specialist ($65/hr)
                             </DropdownMenuItem>
                             {payer.status === "Missing Documents" && (
@@ -262,42 +264,25 @@ function PayerDetailContent({ params }: { params: { id: string } }) {
         payerName={payer.name}
       />
 
-      <ReCredentialModal
-        isOpen={showReCredentialModal}
-        onClose={() => setShowReCredentialModal(false)}
-        payerName={payer.name}
-      />
-
       <ClipChatModal
         isOpen={showClipModal}
         onClose={() => setShowClipModal(false)}
         initialMessage={`Help me complete credentialing for ${payer.name}. Review what documents are needed and suggest next steps.`}
       />
 
-      {showHireModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="rounded-lg bg-card p-6 shadow-lg max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Hire Credentialing Specialist</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              A CareLumi credentialing specialist will take over this application for $65/hour. They'll handle all
-              documentation, follow-ups, and payer communications.
-            </p>
-            <p className="text-sm font-medium mb-6">Estimated time: 3-5 hours ($195-$325 total)</p>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowHireModal(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  alert("Request submitted! A specialist will contact you within 24 hours.")
-                  setShowHireModal(false)
-                }}
-              >
-                Request Specialist
-              </Button>
-            </div>
-          </div>
-        </div>
+      {showReCredentialOverlay && (
+        <UpgradeOverlay
+          feature="re-credential"
+          title="Contact Sales to Upgrade"
+          description="Automate provider re-credentialing with payers. Our premium plan handles re-attestation, updates, and payer communications. Contact our sales team to unlock this feature."
+        />
+      )}
+      {showHireSpecialistOverlay && (
+        <UpgradeOverlay
+          feature="hire-specialist"
+          title="Contact Sales to Upgrade"
+          description="Get dedicated credentialing specialists to handle your applications for $65/hour. Contact our sales team to unlock this concierge service."
+        />
       )}
     </div>
   )
