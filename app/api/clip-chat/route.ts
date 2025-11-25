@@ -2,6 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { searchKnowledgeBase, buildContext } from "@/lib/knowledge-base/retrieval"
 import { getOrgIdServer } from "@/lib/auth/server"
 import { getOrgById } from "@/lib/organizations"
+import { calculateAICost, type AIUsage } from "@/lib/utils/ai-cost-calculator"
+import { sql } from "@/lib/db"
 
 const ORG_TYPE_CONTEXT = {
   surgery_center: `
@@ -136,7 +138,40 @@ If a question requires information beyond your knowledge base:
 
 Remember: You're assisting with licensing, inspections, staff training, patient safety, regulatory requirements, multi-state operations, and the CareLumi platform features.`
 
+function getSessionId(headers: Headers): string | null {
+  const cookie = headers.get("cookie")
+  if (!cookie) return null
+
+  const match = cookie.match(/session_id=([^;]+)/)
+  return match ? match[1] : null
+}
+
+async function logAIUsage(
+  sessionId: string | null,
+  orgId: string,
+  usage: AIUsage,
+  feature: string,
+  success: boolean,
+  errorMessage?: string,
+) {
+  if (!sessionId) return
+
+  const cost = calculateAICost(usage)
+
+  try {
+    await sql`
+      INSERT INTO ai_usage_logs (session_id, org_id, provider, model, feature, input_tokens, output_tokens, cost_usd, success, error_message, called_at)
+      VALUES (${sessionId}, ${orgId}, ${usage.provider}, ${usage.model}, ${feature}, ${usage.inputTokens}, ${usage.outputTokens}, ${cost}, ${success}, ${errorMessage || null}, NOW())
+    `
+  } catch (error) {
+    console.error("[CareLumi] Failed to log AI usage:", error)
+  }
+}
+
 export async function POST(request: Request) {
+  const startTime = Date.now()
+  const sessionId = getSessionId(request.headers)
+
   try {
     console.log("[v0] Clip chat API called")
 
@@ -204,6 +239,10 @@ Now answer the user's question based on this context.`
     // Stream the response
     const result = await chat.sendMessageStream(latestMessage.content)
 
+    let totalInputTokens = 0
+    let totalOutputTokens = 0
+    let fullResponseText = ""
+
     // Create a readable stream for the response
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
@@ -211,12 +250,58 @@ Now answer the user's question based on this context.`
         try {
           for await (const chunk of result.stream) {
             const text = chunk.text()
+            fullResponseText += text
             // Send as plain text chunks
             controller.enqueue(encoder.encode(text))
           }
+
+          const response = await result.response
+          const usageMetadata = response.usageMetadata || { promptTokenCount: 0, candidatesTokenCount: 0 }
+          totalInputTokens = usageMetadata.promptTokenCount || 0
+          totalOutputTokens = usageMetadata.candidatesTokenCount || 0
+
+          // Log AI usage
+          const usage: AIUsage = {
+            provider: "gemini",
+            model: "gemini-2.0-flash-exp",
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens,
+          }
+          await logAIUsage(sessionId, orgId || "unknown", usage, "clip_chat", true)
+
+          const responseTime = Date.now() - startTime
+          if (sessionId && orgId) {
+            try {
+              await sql`
+                INSERT INTO chat_conversation_logs (session_id, org_id, user_message, ai_response, response_time_ms, created_at)
+                VALUES (${sessionId}, ${orgId}, ${latestMessage.content}, ${fullResponseText}, ${responseTime}, NOW())
+              `
+            } catch (error) {
+              console.error("[CareLumi] Failed to log chat conversation:", error)
+            }
+          }
+
           controller.close()
         } catch (error) {
           console.error("[v0] Stream error:", error)
+
+          if (totalInputTokens > 0) {
+            const usage: AIUsage = {
+              provider: "gemini",
+              model: "gemini-2.0-flash-exp",
+              inputTokens: totalInputTokens,
+              outputTokens: totalOutputTokens,
+            }
+            await logAIUsage(
+              sessionId,
+              orgId || "unknown",
+              usage,
+              "clip_chat",
+              false,
+              error instanceof Error ? error.message : "Unknown error",
+            )
+          }
+
           controller.error(error)
         }
       },
