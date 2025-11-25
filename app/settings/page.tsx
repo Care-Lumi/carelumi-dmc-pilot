@@ -12,9 +12,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Building2, User } from "lucide-react"
+import cn from "classnames"
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
   const [activeTab, setActiveTab] = useState("profile")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
@@ -47,6 +54,16 @@ export default function SettingsPage() {
       setActiveTab(tabParam)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
 
   const handleSave = () => {
     // TODO: Implement save to database
@@ -124,7 +141,7 @@ export default function SettingsPage() {
       <Sidebar />
       <TopNav />
 
-      <main className="ml-60 mt-16 p-8">
+      <main className={cn("mt-16 p-8 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="max-w-[1400px] mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-semibold text-foreground">Settings</h1>

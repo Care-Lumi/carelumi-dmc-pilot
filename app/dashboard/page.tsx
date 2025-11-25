@@ -22,6 +22,7 @@ import { GenerateStaffLinkModal } from "@/components/dashboard/modals/generate-s
 import { AuditLogModal } from "@/components/dashboard/modals/audit-log-modal"
 import { AttestationModal } from "@/components/dashboard/modals/attestation-modal"
 import { ClipVoiceIntro } from "@/components/dashboard/clip-voice-intro"
+import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
   const [criticalAlerts, setCriticalAlerts] = useState<any[]>([])
@@ -185,7 +186,54 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <Sidebar />
       <TopNav />
-      <main className="ml-60 mt-16 p-12">
+      <DashboardContent
+        criticalAlerts={criticalAlerts}
+        metrics={metrics}
+        showWelcome={showWelcome}
+        showClipIntro={showClipIntro}
+        showTour={showTour}
+        handleTakeTour={handleTakeTour}
+        handleSkipTour={handleSkipTour}
+        handleClipIntroComplete={handleClipIntroComplete}
+        handleClipIntroSkip={handleClipIntroSkip}
+        handleTourComplete={handleTourComplete}
+      />
+    </div>
+  )
+}
+
+function DashboardContent({
+  criticalAlerts,
+  metrics,
+  showWelcome,
+  showClipIntro,
+  showTour,
+  handleTakeTour,
+  handleSkipTour,
+  handleClipIntroComplete,
+  handleClipIntroSkip,
+  handleTourComplete,
+}: any) {
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
+
+  return (
+    <>
+      <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="mx-auto max-w-[1400px] space-y-8">
           <div className="flex justify-end">
             <p className="text-xs text-muted-foreground">
@@ -232,6 +280,6 @@ export default function DashboardPage() {
       <GenerateStaffLinkModal />
       <AuditLogModal />
       <AttestationModal />
-    </div>
+    </>
   )
 }

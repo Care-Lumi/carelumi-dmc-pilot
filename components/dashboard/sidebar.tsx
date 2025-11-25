@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, createContext, useContext } from "react"
+import { useState, createContext, useContext, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -42,7 +42,12 @@ const navigationItems = [
 ]
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
   const [showClipChat, setShowClipChat] = useState(false)
   const [showClipVoice, setShowClipVoice] = useState(false)
   const pathname = usePathname()
@@ -70,6 +75,24 @@ export function Sidebar() {
     setShowClipVoice(true)
   }
 
+  const toggleCollapsed = () => {
+    const newState = !collapsed
+    setCollapsed(newState)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sidebar-collapsed", String(newState))
+      window.dispatchEvent(new CustomEvent("sidebar-collapsed-changed", { detail: newState }))
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedCollapsed = localStorage.getItem("sidebar-collapsed")
+      if (storedCollapsed !== null) {
+        setCollapsed(storedCollapsed === "true")
+      }
+    }
+  }, [])
+
   return (
     <SidebarContext.Provider value={{ collapsed }}>
       <aside
@@ -88,7 +111,7 @@ export function Sidebar() {
                 <img src="/images/carelumi-thumbnail-transparent.png" alt="CareLumi" className="h-10" />
               )}
             </Link>
-            <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={toggleCollapsed} className="h-8 w-8">
               {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
           </div>

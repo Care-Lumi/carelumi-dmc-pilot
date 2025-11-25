@@ -11,6 +11,7 @@ import { AddLocationModal } from "@/components/dashboard/add-location-modal"
 import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
+import { cn } from "@/lib/utils"
 
 export default function FacilitiesPage() {
   return <FacilitiesContent />
@@ -18,6 +19,24 @@ export default function FacilitiesPage() {
 
 function FacilitiesContent() {
   const router = useRouter()
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+      localStorage.setItem("sidebar-collapsed", e.detail.toString())
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
+
   const [showExpansionModal, setShowExpansionModal] = useState(false)
   const [selectedState, setSelectedState] = useState("")
   const [showAddLocationModal, setShowAddLocationModal] = useState(false)
@@ -57,7 +76,7 @@ function FacilitiesContent() {
       <Sidebar />
       <TopNav />
 
-      <main className="ml-60 mt-16 p-12">
+      <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="mx-auto max-w-[1400px]">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">

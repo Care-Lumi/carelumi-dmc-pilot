@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
@@ -14,9 +14,27 @@ import { ChevronLeft, Search, Mic, RefreshCcw, HelpCircle } from "lucide-react"
 import { SANDBOX_BILLING_COMPLIANCE } from "@/lib/data/sandbox-data"
 import { ClipActionModal } from "@/components/dashboard/modals/clip-action-modal"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
+import { cn } from "@/lib/utils"
 
 function RevenueRiskContent() {
   const router = useRouter()
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
+
   const [searchQuery, setSearchQuery] = useState("")
   const [providerFilter, setProviderFilter] = useState("all")
   const [payerFilter, setPayerFilter] = useState("all")
@@ -71,7 +89,7 @@ function RevenueRiskContent() {
 
       <Sidebar />
       <TopNav />
-      <main className="ml-60 mt-16 p-12">
+      <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="mx-auto max-w-[1400px] space-y-8">
           <div className="flex items-center justify-between">
             <div>

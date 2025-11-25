@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
@@ -10,6 +10,7 @@ import { SANDBOX_REGULATORY_UPDATES } from "@/lib/data/sandbox-data"
 import { ChevronLeft, Mic } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
+import { cn } from "@/lib/utils"
 
 const setClipContext = (context) => {
   // Placeholder for setClipContext implementation
@@ -22,6 +23,23 @@ export default function RegulatoryUpdatesPage() {
 
 function RegulatoryUpdatesContent() {
   const router = useRouter()
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
+
   const [searchQuery, setSearchQuery] = useState("")
   const [impactFilter, setImpactFilter] = useState("all")
   const [sourceFilter, setSourceFilter] = useState("all")
@@ -64,7 +82,7 @@ function RegulatoryUpdatesContent() {
       <Sidebar />
       <TopNav />
 
-      <main className="ml-60 mt-16 p-12">
+      <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="mx-auto max-w-[1400px]">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">

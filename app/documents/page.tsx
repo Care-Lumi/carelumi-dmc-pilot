@@ -8,6 +8,7 @@ import { UploadDocumentsModal } from "@/components/dashboard/upload-documents-mo
 import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ChevronLeft, Building2, UserCheck, BookOpen, X, Search, UploadIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 type Document = {
   id: string
@@ -34,6 +35,22 @@ function DocumentsContent() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
 
   const fetchDocuments = async () => {
     try {
@@ -164,7 +181,7 @@ function DocumentsContent() {
       <Sidebar />
       <TopNav />
 
-      <main className="ml-60 mt-16 p-12">
+      <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="mx-auto max-w-[1400px]">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">

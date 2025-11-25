@@ -32,7 +32,7 @@ export function ExpiringSoonCard({ className, total = 0, loading = false }: Expi
             </Tooltip>
           </div>
 
-          <div className="mt-4 space-y-1">
+          <div className="space-y-1">
             {loading ? (
               <div className="flex items-center gap-2">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

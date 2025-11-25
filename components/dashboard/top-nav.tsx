@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, HelpCircle, Mic } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -14,8 +14,26 @@ import Link from "next/link"
 export function TopNav() {
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [showSearchToast, setShowSearchToast] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   const notifications: any[] = []
+
+  useEffect(() => {
+    const checkCollapsed = () => {
+      const collapsed = localStorage.getItem("sidebar-collapsed") === "true"
+      setIsSidebarCollapsed(collapsed)
+    }
+
+    checkCollapsed()
+
+    const handleSidebarChange = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>
+      setIsSidebarCollapsed(customEvent.detail)
+    }
+
+    window.addEventListener("sidebar-collapsed-changed", handleSidebarChange)
+    return () => window.removeEventListener("sidebar-collapsed-changed", handleSidebarChange)
+  }, [])
 
   const getInitials = (name: string) => {
     return name
@@ -38,7 +56,11 @@ export function TopNav() {
 
   return (
     <>
-      <header className="fixed left-60 right-0 top-0 z-30 h-16 border-b border-border bg-white">
+      <header
+        className={`fixed right-0 top-0 z-30 h-16 border-b border-border bg-white transition-all duration-300 ${
+          isSidebarCollapsed ? "left-16" : "left-60"
+        }`}
+      >
         <div className="flex h-full items-center justify-between px-6">
           {/* Left: Organization name and breadcrumb */}
           <div className="flex items-center gap-4">

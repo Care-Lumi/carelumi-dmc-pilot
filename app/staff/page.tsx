@@ -12,6 +12,7 @@ import { StaffActionsModal } from "@/components/dashboard/staff-actions-modal"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { UploadDocumentsModal } from "@/components/dashboard/upload-documents-modal"
 import { RenewalStepsModal } from "@/components/dashboard/renewal-steps-modal"
+import { cn } from "@/lib/utils"
 
 type StaffLicense = {
   docType: string
@@ -31,6 +32,23 @@ type StaffMember = {
 
 function StaffCredentialsContent() {
   const router = useRouter()
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
+
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [showAddStaffOverlay, setShowAddStaffOverlay] = useState(false)
@@ -189,7 +207,7 @@ function StaffCredentialsContent() {
         <Sidebar />
         <TopNav />
 
-        <main className="ml-60 mt-16 p-12 transition-all duration-300">
+        <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
           <div className="mx-auto max-w-[1400px]">
             {/* Header */}
             <div className="mb-8 flex items-center justify-between">

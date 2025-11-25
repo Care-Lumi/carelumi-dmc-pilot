@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 import { PayerUpgradeModal } from "@/components/dashboard/payer-upgrade-modal"
+import { cn } from "@/lib/utils"
 
 export default function PayerCredentialingPage() {
   return <PayerCredentialingContent />
@@ -19,6 +20,23 @@ export default function PayerCredentialingPage() {
 
 function PayerCredentialingContent() {
   const router = useRouter()
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
+
   const [statusFilter, setStatusFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
@@ -65,7 +83,7 @@ function PayerCredentialingContent() {
       <Sidebar />
       <TopNav />
 
-      <main className="ml-60 mt-16 p-12">
+      <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="mx-auto max-w-[1400px]">
           {/* Header */}
           <div className="mb-8 flex items-center justify-between">
