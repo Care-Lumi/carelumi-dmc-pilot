@@ -5,13 +5,14 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
-import { SANDBOX_FACILITIES } from "@/lib/data/sandbox-data"
 import { ChevronLeft, Mic } from "lucide-react"
 import { AddLocationModal } from "@/components/dashboard/add-location-modal"
 import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 import { cn } from "@/lib/utils"
+import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
+import { useOrg } from "@/lib/contexts/org-context"
 
 export default function FacilitiesPage() {
   return <FacilitiesContent />
@@ -19,12 +20,28 @@ export default function FacilitiesPage() {
 
 function FacilitiesContent() {
   const router = useRouter()
+  const { org } = useOrg()
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebar-collapsed") === "true"
     }
     return false
   })
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
+  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
+  const facilities = sandboxData.SANDBOX_FACILITIES
+
+  const [showExpansionModal, setShowExpansionModal] = useState(false)
+  const [selectedState, setSelectedState] = useState("")
+  const [showAddLocationModal, setShowAddLocationModal] = useState(false)
+  const [showAddLocationOverlay, setShowAddLocationOverlay] = useState(false)
+  const [showExpandStateOverlay, setShowExpandStateOverlay] = useState(false)
+  const [locationFilter, setLocationFilter] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     const handleCollapsedChange = (e: CustomEvent) => {
@@ -36,20 +53,6 @@ function FacilitiesContent() {
       window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
     }
   }, [])
-
-  const [showExpansionModal, setShowExpansionModal] = useState(false)
-  const [selectedState, setSelectedState] = useState("")
-  const [showAddLocationModal, setShowAddLocationModal] = useState(false)
-  const [showAddLocationOverlay, setShowAddLocationOverlay] = useState(false)
-  const [showExpandStateOverlay, setShowExpandStateOverlay] = useState(false)
-  const [locationFilter, setLocationFilter] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
-
-  const facilities = SANDBOX_FACILITIES
 
   const filteredFacilities = locationFilter === "all" ? facilities : facilities.filter((f) => f.id === locationFilter)
 

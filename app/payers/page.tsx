@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
-import { SANDBOX_PAYERS } from "@/lib/data/sandbox-data"
 import { ChevronLeft, Mic } from "lucide-react"
 import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +12,8 @@ import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 import { PayerUpgradeModal } from "@/components/dashboard/payer-upgrade-modal"
 import { cn } from "@/lib/utils"
+import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
+import { useOrg } from "@/lib/contexts/org-context"
 
 export default function PayerCredentialingPage() {
   return <PayerCredentialingContent />
@@ -20,6 +21,7 @@ export default function PayerCredentialingPage() {
 
 function PayerCredentialingContent() {
   const router = useRouter()
+  const { org } = useOrg()
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebar-collapsed") === "true"
@@ -49,7 +51,8 @@ function PayerCredentialingContent() {
     window.scrollTo(0, 0)
   }, [])
 
-  const payerCredentialing = SANDBOX_PAYERS
+  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
+  const payerCredentialing = sandboxData.SANDBOX_PAYERS
 
   const filteredPayers = payerCredentialing.filter((payer) => {
     const matchesStatus = statusFilter === "all" || payer.status === statusFilter

@@ -11,13 +11,16 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { ChevronLeft, Search, Mic, RefreshCcw, HelpCircle } from "lucide-react"
-import { SANDBOX_BILLING_COMPLIANCE } from "@/lib/data/sandbox-data"
+import type { SANDBOX_BILLING_COMPLIANCE } from "@/lib/data/sandbox-data"
 import { ClipActionModal } from "@/components/dashboard/modals/clip-action-modal"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 import { cn } from "@/lib/utils"
+import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
+import { useOrg } from "@/lib/contexts/org-context"
 
 function RevenueRiskContent() {
   const router = useRouter()
+  const { org } = useOrg()
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebar-collapsed") === "true"
@@ -41,7 +44,8 @@ function RevenueRiskContent() {
   const [clipModalOpen, setClipModalOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<(typeof SANDBOX_BILLING_COMPLIANCE)[0] | null>(null)
 
-  const revenueAtRiskDetails = SANDBOX_BILLING_COMPLIANCE
+  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
+  const revenueAtRiskDetails = sandboxData.SANDBOX_BILLING_COMPLIANCE
 
   const totalAtRisk = revenueAtRiskDetails.reduce((sum, item) => sum + item.atRisk, 0)
   const totalProviders = new Set(revenueAtRiskDetails.map((item) => item.provider)).size

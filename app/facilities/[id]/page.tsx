@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
-import { SANDBOX_FACILITIES } from "@/lib/data/sandbox-data"
+import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
+import { useOrg } from "@/lib/contexts/org-context"
 import { ChevronLeft } from "lucide-react"
 
 export default function FacilityDetailPage({ params }: { params: { id: string } }) {
@@ -12,7 +13,9 @@ export default function FacilityDetailPage({ params }: { params: { id: string } 
 }
 
 function FacilityDetailContent({ params }: { params: { id: string } }) {
-  const [facility, setFacility] = useState(() => SANDBOX_FACILITIES.find((f) => f.id === params.id))
+  const { org } = useOrg()
+  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
+  const [facility, setFacility] = useState(() => sandboxData.SANDBOX_FACILITIES.find((f) => f.id === params.id))
 
   useEffect(() => {
     window.scrollTo(0, 0)

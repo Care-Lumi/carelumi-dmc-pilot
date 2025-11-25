@@ -6,27 +6,32 @@ import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
-import { SANDBOX_AUDIT_MISSING, SANDBOX_AUDIT_COMPLETE_ITEMS } from "@/lib/data/sandbox-data"
+import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
+import { useOrg } from "@/lib/contexts/org-context"
 
 type AuditType = "general" | "state" | "fire" | "payer" | "custom"
 
-const completeItemsFromSandbox = SANDBOX_AUDIT_COMPLETE_ITEMS.map((item, index) => ({
-  id: `c${index + 1}`,
-  category: "Compliance",
-  item: item,
-  status: "complete" as const,
-  auditTypes: ["general" as const],
-}))
-
-const allItems = [...SANDBOX_AUDIT_MISSING, ...completeItemsFromSandbox]
-
 function AuditReadinessContent() {
+  const { org } = useOrg()
+
+  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
+
   const [selectedAuditType, setSelectedAuditType] = useState<AuditType>("general")
   const [showComplete, setShowComplete] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showAuditModal, setShowAuditModal] = useState(false)
   const [showUploadOverlay, setShowUploadOverlay] = useState(false)
   const [showAuditOverlay, setShowAuditOverlay] = useState(false)
+
+  const completeItemsFromSandbox = sandboxData.SANDBOX_AUDIT_COMPLETE_ITEMS.map((item, index) => ({
+    id: `c${index + 1}`,
+    category: "Compliance",
+    item: item,
+    status: "complete" as const,
+    auditTypes: ["general" as const],
+  }))
+
+  const allItems = [...sandboxData.SANDBOX_AUDIT_MISSING, ...completeItemsFromSandbox]
 
   // Filter items by selected audit type
   const filteredItems = allItems.filter((item) => item.auditTypes.includes(selectedAuditType))

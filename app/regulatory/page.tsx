@@ -6,11 +6,12 @@ import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { ClipActionModal } from "@/components/dashboard/modals/clip-action-modal"
-import { SANDBOX_REGULATORY_UPDATES } from "@/lib/data/sandbox-data"
 import { ChevronLeft, Mic } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
 import { cn } from "@/lib/utils"
+import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
+import { useOrg } from "@/lib/contexts/org-context"
 
 const setClipContext = (context) => {
   // Placeholder for setClipContext implementation
@@ -23,6 +24,7 @@ export default function RegulatoryUpdatesPage() {
 
 function RegulatoryUpdatesContent() {
   const router = useRouter()
+  const { org } = useOrg()
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebar-collapsed") === "true"
@@ -47,7 +49,8 @@ function RegulatoryUpdatesContent() {
   const [showClipModal, setShowClipModal] = useState(false)
   const [selectedUpdate, setSelectedUpdate] = useState<any>(null)
 
-  const regulatoryUpdates = SANDBOX_REGULATORY_UPDATES
+  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
+  const regulatoryUpdates = sandboxData.SANDBOX_REGULATORY_UPDATES
 
   const totalUpdates = regulatoryUpdates.length
   const criticalPending = regulatoryUpdates.filter((u) => u.type === "critical").length
