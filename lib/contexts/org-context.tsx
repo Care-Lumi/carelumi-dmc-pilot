@@ -23,21 +23,29 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoginPage) {
+      console.log("[v0] On login page, skipping org fetch")
       setIsLoading(false)
       return
     }
 
     async function fetchCurrentOrg() {
       try {
+        console.log("[v0] Fetching current org from API...")
         const response = await fetch("/api/auth/current-org")
         const data = await response.json()
 
+        console.log("[v0] API response:", data)
+
         if (data.org) {
+          console.log("[v0] Setting org:", data.org.shortName)
           setOrg(data.org)
+        } else {
+          console.log("[v0] No org returned from API")
         }
       } catch (error) {
         console.error("[v0] Failed to fetch current org:", error)
       } finally {
+        console.log("[v0] Setting isLoading to false")
         setIsLoading(false)
       }
     }
