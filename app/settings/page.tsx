@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Building2, User } from "lucide-react"
-import cn from "classnames"
+import { cn } from "@/lib/utils"
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
@@ -272,6 +272,9 @@ export default function SettingsPage() {
                   <Button variant="outline" onClick={handleCancel}>
                     Cancel
                   </Button>
+                  <Button variant="default" onClick={handleSave}>
+                    Save
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -333,6 +336,9 @@ export default function SettingsPage() {
                 <div className="flex justify-end gap-3 pt-4">
                   <Button variant="outline" onClick={handleCancel}>
                     Cancel
+                  </Button>
+                  <Button variant="default" onClick={handleSave}>
+                    Save
                   </Button>
                 </div>
               </CardContent>
