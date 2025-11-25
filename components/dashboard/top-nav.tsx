@@ -8,13 +8,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { NotificationDropdown } from "./notification-dropdown"
-import { userData, organizations } from "@/lib/dmc-pilot-data"
+import { organizations } from "@/lib/dmc-pilot-data"
+import { useOrg } from "@/lib/contexts/org-context"
 import Link from "next/link"
 
 export function TopNav() {
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [showSearchToast, setShowSearchToast] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const { org } = useOrg()
 
   const notifications: any[] = []
 
@@ -64,7 +66,7 @@ export function TopNav() {
         <div className="flex h-full items-center justify-between px-6">
           {/* Left: Organization name and breadcrumb */}
           <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold text-foreground">{userData.organization}</h1>
+            <h1 className="text-lg font-semibold text-foreground">{org?.name || "Loading..."}</h1>
             <span className="text-muted-foreground">|</span>
             <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Home
@@ -129,7 +131,7 @@ export function TopNav() {
             <div className="h-9 w-9 rounded-full">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  {getInitials(userData.name)}
+                  {org?.primaryContactName ? getInitials(org.primaryContactName) : "?"}
                 </AvatarFallback>
               </Avatar>
             </div>

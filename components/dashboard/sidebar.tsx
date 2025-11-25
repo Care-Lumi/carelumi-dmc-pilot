@@ -25,7 +25,6 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
 import { ClipVoiceModal } from "@/components/dashboard/clip-voice-modal"
-import { userData } from "@/lib/dmc-pilot-data"
 import { ProBadge } from "@/components/pro-badge"
 import { useOrg } from "@/lib/contexts/org-context"
 
@@ -184,13 +183,13 @@ export function Sidebar() {
             >
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {getInitials(userData.name)}
+                  {org?.primaryContactName ? getInitials(org.primaryContactName) : "?"}
                 </AvatarFallback>
               </Avatar>
               {!collapsed && (
                 <div className="flex-1 truncate text-left">
-                  <p className="text-sm font-medium text-foreground">{userData.name}</p>
-                  <p className="text-xs text-muted-foreground">{userData.role}</p>
+                  <p className="text-sm font-medium text-foreground">{org?.primaryContactName || "Loading..."}</p>
+                  <p className="text-xs text-muted-foreground">Owner</p>
                 </div>
               )}
             </div>
