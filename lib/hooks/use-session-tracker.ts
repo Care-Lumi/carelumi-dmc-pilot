@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "use"
+import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import Cookies from "js-cookie"
 import { v4 as uuidv4 } from "uuid"

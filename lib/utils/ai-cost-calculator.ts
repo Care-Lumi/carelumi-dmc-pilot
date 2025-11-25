@@ -9,16 +9,16 @@ interface ModelPricing {
 // Exact model names from our codebase
 const MODEL_PRICING: Record<string, ModelPricing> = {
   "gemini-2.0-flash-exp": {
-    input: 0.0001, // $0.10 per 1M tokens
-    output: 0.0004, // $0.40 per 1M tokens
+    input: 0.1, // $0.10 per 1M tokens
+    output: 0.4, // $0.40 per 1M tokens
   },
   "gpt-4o": {
-    input: 0.0025, // $2.50 per 1M tokens
-    output: 0.01, // $10.00 per 1M tokens
+    input: 2.5, // $2.50 per 1M tokens
+    output: 10.0, // $10.00 per 1M tokens
   },
   "claude-sonnet-4": {
-    input: 0.003, // $3.00 per 1M tokens
-    output: 0.015, // $15.00 per 1M tokens
+    input: 3.0, // $3.00 per 1M tokens
+    output: 15.0, // $15.00 per 1M tokens
   },
 }
 

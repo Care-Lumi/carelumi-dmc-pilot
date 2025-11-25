@@ -21,16 +21,17 @@ import { useToast } from "@/hooks/use-toast"
 import { Document, Page, pdfjs } from "react-pdf"
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
+import { useClickTracker } from "@/lib/hooks/use-click-tracker"
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 interface UploadDocumentsModalProps {
   isOpen: boolean
   onClose: () => void
-  onUploadSuccess?: (classification: any) => void
+  onUploadComplete?: (classification: any) => void
 }
 
-export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: UploadDocumentsModalProps) {
+export function UploadDocumentsModal({ isOpen, onClose, onUploadComplete }: UploadDocumentsModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [currentFileIndex, setCurrentFileIndex] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
@@ -66,6 +67,7 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
   } | null>(null)
 
   const { toast } = useToast()
+  const { trackClick } = useClickTracker()
 
   useEffect(() => {
     if (!isOpen) {
@@ -144,6 +146,7 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return
+    trackClick("upload_documents_clicked", { file_count: selectedFiles.length })
     await processFile(selectedFiles[currentFileIndex])
   }
 
@@ -352,7 +355,7 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
       const data = await response.json()
       console.log("[v0] Document saved successfully:", data.document)
       setUploadStatus("success")
-      onUploadSuccess?.(data.document)
+      onUploadComplete?.(data.document)
 
       setTimeout(() => {
         if (currentFileIndex < selectedFiles.length - 1) {

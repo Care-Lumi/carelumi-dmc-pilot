@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 import { generateText } from "ai"
 import { calculateAICost, type AIUsage } from "@/lib/utils/ai-cost-calculator"
 import { sql } from "@/lib/db"
+import { getOrgIdServer } from "@/lib/auth/server"
 
 const CLASSIFICATION_PROMPT = `You are analyzing a healthcare compliance document. Extract structured information in JSON format.
 
@@ -217,9 +218,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid file type. Please upload PDF, JPG, or PNG files." }, { status: 400 })
     }
 
-    const { sql: dbSql } = await import("@/lib/db")
-    const orgIdResult = await dbSql`SELECT value FROM cookies WHERE key = 'org_id' LIMIT 1`
-    const orgId = orgIdResult[0]?.value || "unknown"
+    const orgId = (await getOrgIdServer()) || "unknown"
 
     // Convert file to base64 for AI processing
     const bytes = await file.arrayBuffer()

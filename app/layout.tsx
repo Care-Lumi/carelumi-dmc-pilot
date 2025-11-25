@@ -5,6 +5,7 @@ import "./globals.css"
 
 import { UpgradeOverlayProvider } from "@/lib/contexts/upgrade-overlay-context"
 import { OrgProvider } from "@/lib/contexts/org-context"
+import { SessionTrackerProvider } from "@/lib/contexts/session-tracker-context"
 import { ElevenLabsProvider } from "@/components/providers/elevenlabs-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { AuthGate } from "@/components/auth-gate"
@@ -67,12 +68,14 @@ export default function RootLayout({
           <ElevenLabsProvider />
           <AuthGate>
             <OrgProvider>
-              {isPreview && (
-                <div className="bg-amber-500 text-amber-950 px-4 py-2 text-center text-sm font-medium">
-                  Preview Environment — Changes here do not affect production
-                </div>
-              )}
-              <UpgradeOverlayProvider>{children}</UpgradeOverlayProvider>
+              <SessionTrackerProvider>
+                {isPreview && (
+                  <div className="bg-amber-500 text-amber-950 px-4 py-2 text-center text-sm font-medium">
+                    Preview Environment — Changes here do not affect production
+                  </div>
+                )}
+                <UpgradeOverlayProvider>{children}</UpgradeOverlayProvider>
+              </SessionTrackerProvider>
             </OrgProvider>
           </AuthGate>
         </ErrorBoundary>

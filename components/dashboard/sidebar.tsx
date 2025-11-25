@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, createContext, useContext, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useClickTracker } from "@/lib/hooks/use-click-tracker"
 import {
   Home,
   Users,
@@ -55,6 +56,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { org } = useOrg()
+  const { trackClick } = useClickTracker()
 
   const getInitials = (name: string) => {
     return name
@@ -71,10 +73,12 @@ export function Sidebar() {
   }
 
   const handleClipClick = () => {
+    trackClick("clip_chat_opened")
     setShowClipChat(true)
   }
 
   const handleVoiceClick = () => {
+    trackClick("clip_voice_opened")
     setShowClipVoice(true)
   }
 

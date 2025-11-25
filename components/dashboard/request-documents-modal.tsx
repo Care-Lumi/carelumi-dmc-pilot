@@ -1,6 +1,7 @@
 "use client"
 
 import { Sparkles } from "lucide-react"
+import { useClickTracker } from "@/lib/hooks/use-click-tracker"
 
 interface RequestDocumentsModalProps {
   isOpen: boolean
@@ -8,7 +9,14 @@ interface RequestDocumentsModalProps {
 }
 
 export function RequestDocumentsModal({ isOpen, onClose }: RequestDocumentsModalProps) {
+  const { trackClick } = useClickTracker()
+
   if (!isOpen) return null
+
+  const handleRequestClick = () => {
+    trackClick("request_documents_clicked")
+    onClose()
+  }
 
   return (
     <>
@@ -45,7 +53,7 @@ export function RequestDocumentsModal({ isOpen, onClose }: RequestDocumentsModal
           </ul>
 
           <button
-            onClick={onClose}
+            onClick={handleRequestClick}
             className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
           >
             Contact Sales to Upgrade
