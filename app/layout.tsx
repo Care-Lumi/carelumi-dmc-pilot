@@ -69,7 +69,7 @@ export default function RootLayout({
             <OrgProvider>
               {isPreview && (
                 <div className="bg-amber-500 text-amber-950 px-4 py-2 text-center text-sm font-medium">
-                  Preview Environment - Multi-Tenant Feature Branch
+                  Preview Environment — Changes here do not affect production
                 </div>
               )}
               <UpgradeOverlayProvider>{children}</UpgradeOverlayProvider>

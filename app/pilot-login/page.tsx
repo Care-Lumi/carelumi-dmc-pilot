@@ -28,7 +28,7 @@ export default function PilotLoginPage() {
       const response = await fetch("/api/auth/pilot-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ accessCode: password }),
       })
 
       console.log("[v0] Login response:", { ok: response.ok, status: response.status })
