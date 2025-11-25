@@ -18,6 +18,7 @@ import {
   DollarSign,
   MessageSquare,
   Phone,
+  LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -80,6 +81,16 @@ export function Sidebar() {
   const handleVoiceClick = () => {
     trackClick("clip_voice_opened")
     setShowClipVoice(true)
+  }
+
+  const handleLogout = async () => {
+    trackClick("logout_clicked")
+    // Clear the authentication cookies
+    document.cookie = "pilot_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC"
+    document.cookie = "org_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC"
+
+    // Redirect to login page
+    router.push("/pilot-login")
   }
 
   const toggleCollapsed = () => {
@@ -221,6 +232,18 @@ export function Sidebar() {
             </Link>
 
             {/* Log Out */}
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start gap-3 text-muted-foreground hover:bg-muted hover:text-foreground",
+                collapsed && "justify-center px-0",
+              )}
+              title={collapsed ? "Log Out" : undefined}
+              onClick={handleLogout}
+            >
+              <LogOut className="h-5 w-5 shrink-0" />
+              {!collapsed && <span className="text-sm">Log Out</span>}
+            </Button>
           </div>
         </div>
       </aside>
