@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useOrg } from "@/lib/contexts/org-context"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2 } from "lucide-react"
@@ -13,6 +14,8 @@ interface OnboardingWelcomeProps {
 
 export function OnboardingWelcome({ isOpen, onTakeTour, onSkip }: OnboardingWelcomeProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const { org } = useOrg()
+  const firstName = org?.primaryContactName?.split(" ")[0] || "there"
 
   const handleTakeTour = () => {
     localStorage.setItem("carelumi_dmc_onboarding_seen", "true")
@@ -35,7 +38,7 @@ export function OnboardingWelcome({ isOpen, onTakeTour, onSkip }: OnboardingWelc
     <Dialog open={isOpen} onOpenChange={handleSkip}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Welcome to CareLumi, John</DialogTitle>
+          <DialogTitle className="text-2xl">Welcome to CareLumi, {firstName}</DialogTitle>
           <DialogDescription className="text-base text-foreground/80 pt-2">
             You're in the free trial. Here's what you can do right now:
           </DialogDescription>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useOrg } from "@/lib/contexts/org-context"
 import { Orb } from "@/components/ui/orb"
 
 interface ClipVoiceIntroProps {
@@ -11,9 +12,11 @@ interface ClipVoiceIntroProps {
 
 export function ClipVoiceIntro({ isOpen, onComplete, onSkip }: ClipVoiceIntroProps) {
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
+  const { org } = useOrg()
+  const firstName = org?.primaryContactName?.split(" ")[0] || "there"
 
   const sentences = [
-    "Welcome, Jack!",
+    `Welcome, ${firstName}!`,
     "I am Clip, CareLumi's AI compliance assistant.",
     "During this trial you can type or ask questions about compliance, document uploads, and how CareLumi works.",
   ]
@@ -21,7 +24,6 @@ export function ClipVoiceIntro({ isOpen, onComplete, onSkip }: ClipVoiceIntroPro
   useEffect(() => {
     if (!isOpen) return
 
-    // Show each sentence with 1.5 second delay
     const timer = setTimeout(() => {
       if (currentSentenceIndex < sentences.length - 1) {
         setCurrentSentenceIndex(currentSentenceIndex + 1)
