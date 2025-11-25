@@ -2,9 +2,27 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
-import { Upload, FileText, Loader2, CheckCircle2, XCircle, Edit2, AlertTriangle } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import {
+  Upload,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Edit2,
+  AlertTriangle,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
+  RotateCw,
+} from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Document, Page, pdfjs } from "react-pdf"
+import "react-pdf/dist/esm/Page/AnnotationLayer.css"
+import "react-pdf/dist/esm/Page/TextLayer.css"
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
 
 interface UploadDocumentsModalProps {
   isOpen: boolean
@@ -24,7 +42,14 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
   const [isEditing, setIsEditing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Editable fields
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null)
+  const [previewZoom, setPreviewZoom] = useState(1)
+  const [previewRotation, setPreviewRotation] = useState(0) // Added rotation state
+  const [numPages, setNumPages] = useState<number | null>(null)
+  const [pageNumber, setPageNumber] = useState(1)
+  const [pdfLoading, setPdfLoading] = useState(true)
+  const [pdfError, setPdfError] = useState<string | null>(null)
+
   const [editedType, setEditedType] = useState("")
   const [editedOwnerName, setEditedOwnerName] = useState("")
   const [editedOwnerType, setEditedOwnerType] = useState<"staff" | "facility" | "payer" | "organization">("staff")
@@ -34,10 +59,44 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
 
   const [duplicateCheck, setDuplicateCheck] = useState<{
     isDuplicate: boolean
+    isRenewal?: boolean
+    isHistorical?: boolean
     existingDocument?: any
+    documentToMarkHistorical?: string
   } | null>(null)
 
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedFiles([])
+      setUploadStatus("idle")
+      setClassification(null)
+      setErrorMessage("")
+      setIsEditing(false)
+      setDuplicateCheck(null)
+      setFilePreviewUrl(null)
+      setPreviewZoom(1)
+      setPreviewRotation(0) // Reset rotation
+      setNumPages(null)
+      setPageNumber(1)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (selectedFiles.length > 0 && currentFileIndex < selectedFiles.length) {
+      const file = selectedFiles[currentFileIndex]
+      const url = URL.createObjectURL(file)
+      setFilePreviewUrl(url)
+      setPreviewZoom(1)
+      setPreviewRotation(0) // Reset rotation when file changes
+      setPageNumber(1)
+
+      return () => {
+        URL.revokeObjectURL(url)
+      }
+    }
+  }, [selectedFiles, currentFileIndex])
 
   if (!isOpen) return null
 
@@ -48,7 +107,14 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
     setClassification(null)
     setErrorMessage("")
     setIsEditing(false)
-    setDuplicateCheck(null) // Reset duplicate check
+    setDuplicateCheck(null)
+    setFilePreviewUrl(null)
+    setPreviewZoom(1)
+    setPreviewRotation(0) // Reset rotation
+    setNumPages(null)
+    setPageNumber(1)
+    setPdfLoading(true)
+    setPdfError(null)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -149,11 +215,15 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
       const detectedType = detectOwnerType(classification.documentType || result.docType || "")
       setEditedOwnerType(detectedType)
 
-      if (editedLicenseNumber && extractedName) {
+      const extractedLicenseNumber = identifiers.licenseNumber || result.licenseNumber || result.certificateNumber || ""
+      const extractedExpiration = validity.expirationDate || result.expirationDate || result.expiresAt || ""
+
+      if (extractedLicenseNumber && extractedName) {
         await checkForDuplicates(
-          editedLicenseNumber,
+          extractedLicenseNumber,
           extractedName,
           classification.documentType || result.docType || "",
+          extractedExpiration,
         )
       }
 
@@ -170,20 +240,45 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
     }
   }
 
-  const checkForDuplicates = async (licenseNumber: string, ownerName: string, docType: string) => {
+  const checkForDuplicates = async (
+    licenseNumber: string,
+    ownerName: string,
+    docType: string,
+    expirationDate: string,
+  ) => {
     try {
+      console.log("[v0] Checking for duplicates with:", { licenseNumber, ownerName, docType, expirationDate })
       const response = await fetch("/api/documents/check-duplicate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ licenseNumber, ownerName, docType }),
+        body: JSON.stringify({ licenseNumber, ownerName, docType, expirationDate }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setDuplicateCheck(data)
-        if (data.isDuplicate) {
-          console.log("[v0] Duplicate document found:", data.existingDocument)
-        }
+      const contentType = response.headers.get("content-type")
+      console.log("[v0] Duplicate check response status:", response.status, "content-type:", contentType)
+
+      if (!contentType?.includes("application/json")) {
+        console.error("[v0] Duplicate check returned non-JSON response:", contentType)
+        const text = await response.text()
+        console.error("[v0] Response body (first 500 chars):", text.substring(0, 500))
+        return
+      }
+
+      const data = await response.json()
+      console.log("[v0] Duplicate check response data:", data)
+
+      if (data.error) {
+        console.error("[v0] Duplicate check API error:", data.error, data.details)
+        return
+      }
+
+      setDuplicateCheck(data)
+      if (data.isDuplicate) {
+        console.log("[v0] Duplicate document found:", data.existingDocument)
+      } else if (data.isRenewal) {
+        console.log("[v0] Renewal detected, will mark old doc as historical:", data.documentToMarkHistorical)
+      } else if (data.isHistorical) {
+        console.log("[v0] Historical upload detected, will save as historical")
       }
     } catch (error) {
       console.error("[v0] Error checking for duplicates:", error)
@@ -226,11 +321,22 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
       formData.append("expiresAt", editedExpiration)
       formData.append("classificationRaw", JSON.stringify(classification))
 
+      if (duplicateCheck?.isHistorical) {
+        formData.append("saveAsHistorical", "true")
+        console.log("[v0] Saving document as historical")
+      }
+      if (duplicateCheck?.isRenewal && duplicateCheck?.documentToMarkHistorical) {
+        formData.append("documentToMarkHistorical", duplicateCheck.documentToMarkHistorical)
+        console.log("[v0] Will mark existing document as historical:", duplicateCheck.documentToMarkHistorical)
+      }
+
       console.log("[v0] Saving document with data:", {
         docType: editedType,
         ownerType: editedOwnerType,
         ownerName: editedOwnerName,
         expiresAt: editedExpiration,
+        saveAsHistorical: duplicateCheck?.isHistorical || false,
+        documentToMarkHistorical: duplicateCheck?.documentToMarkHistorical || null,
       })
 
       const response = await fetch("/api/documents", {
@@ -278,10 +384,40 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
     resetModal()
   }
 
+  const getFileType = () => {
+    if (selectedFiles.length === 0) return null
+    const file = selectedFiles[currentFileIndex]
+    if (file.type === "application/pdf") return "pdf"
+    if (file.type.startsWith("image/")) return "image"
+    return "unknown"
+  }
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages)
+    setPdfLoading(false)
+  }
+
+  const onDocumentLoadError = (error: any) => {
+    setPdfError("Failed to load PDF")
+    setPdfLoading(false)
+    console.error("[v0] PDF load error:", error)
+  }
+
+  const goToPreviousPage = () => {
+    setPageNumber((prev) => Math.max(1, prev - 1))
+  }
+
+  const goToNextPage = () => {
+    setPageNumber((prev) => Math.min(numPages || 1, prev + 1))
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-lg bg-card shadow-xl">
-        {/* Header */}
+      <div
+        className={`relative w-full overflow-hidden rounded-lg bg-card shadow-xl ${
+          uploadStatus === "results" ? "max-w-6xl" : "max-w-2xl"
+        }`}
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white z-10">
           <div>
             <h2 className="text-xl font-semibold text-foreground">Upload Documents</h2>
@@ -296,11 +432,9 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           {uploadStatus === "idle" && (
             <>
-              {/* File Upload Area */}
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -355,12 +489,11 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
                       <p className="text-base font-medium mb-2">Drag & drop your documents here</p>
                       <p className="text-sm text-muted-foreground">or click to browse files</p>
                     </div>
-                    <div className="text-xs text-muted-foreground">Supported: PDF, JPG, PNG • Max 10MB per file</div>
+                    <div className="text-xs text-muted-foreground">Supported: PDF, JPG, PNG - Max 10MB per file</div>
                   </div>
                 )}
               </div>
 
-              {/* Upload Button */}
               {selectedFiles.length > 0 && (
                 <div className="mt-6 flex justify-end">
                   <button
@@ -383,173 +516,327 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadSuccess }: Uploa
           )}
 
           {uploadStatus === "results" && classification && (
-            <div className="max-h-[60vh] space-y-4 overflow-y-auto p-6">
-              {duplicateCheck?.isDuplicate && (
-                <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
-                  <div className="flex gap-3">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                        Possible Duplicate Detected
-                      </h3>
-                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                        A document with the same license number ({editedLicenseNumber}) for {editedOwnerName} already
-                        exists in the system.
-                      </p>
-                      {duplicateCheck.existingDocument && (
-                        <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
-                          Existing: {duplicateCheck.existingDocument.document_type} •{" "}
-                          {duplicateCheck.existingDocument.expiration_date
-                            ? `Expires ${new Date(duplicateCheck.existingDocument.expiration_date).toLocaleDateString()}`
-                            : "No expiration"}{" "}
-                          •{" "}
-                          {duplicateCheck.existingDocument.created_at
-                            ? `Uploaded ${new Date(duplicateCheck.existingDocument.created_at).toLocaleDateString()}`
-                            : ""}
-                        </div>
-                      )}
-                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
-                        You can still proceed to save this as a new document, or cancel and delete the old one first.
-                      </p>
-                    </div>
+            <div className="flex gap-6 max-h-[70vh]">
+              <div className="w-1/2 flex flex-col border border-border rounded-lg overflow-hidden bg-muted/20">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground truncate max-w-[200px]">
+                      {selectedFiles[currentFileIndex]?.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setPreviewRotation((prev) => (prev + 90) % 360)}
+                      className="p-1.5 rounded hover:bg-muted transition-colors"
+                      title="Rotate 90°"
+                    >
+                      <RotateCw className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <button
+                      onClick={() => setPreviewZoom(Math.max(0.5, previewZoom - 0.25))}
+                      className="p-1.5 rounded hover:bg-muted transition-colors"
+                      title="Zoom out"
+                    >
+                      <ZoomOut className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    <span className="text-xs text-muted-foreground w-12 text-center">
+                      {Math.round(previewZoom * 100)}%
+                    </span>
+                    <button
+                      onClick={() => setPreviewZoom(Math.min(3, previewZoom + 0.25))}
+                      className="p-1.5 rounded hover:bg-muted transition-colors"
+                      title="Zoom in"
+                    >
+                      <ZoomIn className="h-4 w-4 text-muted-foreground" />
+                    </button>
                   </div>
                 </div>
-              )}
 
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Classification Results</h3>
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="flex items-center gap-2 text-sm text-[#3b82f6] hover:underline"
-                >
-                  <Edit2 className="h-4 w-4" />
-                  {isEditing ? "Done Editing" : "Edit Information"}
-                </button>
-              </div>
+                <div className="flex-1 overflow-auto p-4 flex flex-col items-center bg-[#f5f5f5]">
+                  {filePreviewUrl && getFileType() === "image" && (
+                    <img
+                      src={filePreviewUrl || "/placeholder.svg"}
+                      alt="Document preview"
+                      className="max-w-full shadow-lg rounded border border-border transition-transform"
+                      style={{
+                        transform: `scale(${previewZoom}) rotate(${previewRotation}deg)`,
+                        transformOrigin: "center center",
+                      }}
+                    />
+                  )}
 
-              <div className="space-y-4">
-                {/* Document Type */}
-                <div className="bg-blue-50 border border-[#3b82f6]/20 rounded-lg p-4">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Document Type</label>
-                  {isEditing ? (
-                    <select
-                      value={editedType}
-                      onChange={(e) => setEditedType(e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-md"
+                  {filePreviewUrl && getFileType() === "pdf" && (
+                    <div
+                      className="flex flex-col items-center w-full"
+                      style={{
+                        transform: `rotate(${previewRotation}deg)`,
+                        transformOrigin: "center center",
+                      }}
                     >
-                      <option value="Medical License">Medical License</option>
-                      <option value="Occupational Therapy Assistant License">
-                        Occupational Therapy Assistant License
-                      </option>
-                      <option value="Nursing License">Nursing License</option>
-                      <option value="DEA Certificate">DEA Certificate</option>
-                      <option value="Facility Permit">Facility Permit</option>
-                      <option value="Insurance Card">Insurance Card</option>
-                      <option value="Certification">Certification</option>
-                      <option value="Background Check">Background Check</option>
-                      <option value="Payer Contract">Payer Contract</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  ) : (
-                    <p className="text-lg font-semibold text-foreground">{editedType}</p>
-                  )}
-                </div>
+                      {pdfLoading && (
+                        <div className="flex flex-col items-center justify-center py-12">
+                          <Loader2 className="h-8 w-8 animate-spin text-[#3b82f6] mb-2" />
+                          <p className="text-sm text-muted-foreground">Loading PDF...</p>
+                        </div>
+                      )}
 
-                <div className="bg-muted/30 border border-border rounded-lg p-4">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Owner Type</label>
-                  {isEditing ? (
-                    <select
-                      value={editedOwnerType}
-                      onChange={(e) => setEditedOwnerType(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-border rounded-md"
-                    >
-                      <option value="staff">Staff Member</option>
-                      <option value="facility">Facility</option>
-                      <option value="payer">Payer</option>
-                      <option value="organization">Organization</option>
-                    </select>
-                  ) : (
-                    <p className="text-lg font-semibold text-foreground capitalize">{editedOwnerType}</p>
-                  )}
-                </div>
+                      {pdfError && (
+                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                          <FileText className="h-16 w-16 mb-4" />
+                          <p className="text-sm">{pdfError}</p>
+                        </div>
+                      )}
 
-                <div className="bg-muted/30 border border-border rounded-lg p-4">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Owner Name</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedOwnerName}
-                      onChange={(e) => setEditedOwnerName(e.target.value)}
-                      placeholder="Staff name, facility name, or payer name"
-                      className="w-full px-3 py-2 border border-border rounded-md"
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold text-foreground">{editedOwnerName || "Not specified"}</p>
-                  )}
-                </div>
+                      <Document
+                        file={filePreviewUrl}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        onLoadError={onDocumentLoadError}
+                        loading=""
+                        className="flex flex-col items-center"
+                      >
+                        <Page
+                          pageNumber={pageNumber}
+                          scale={previewZoom}
+                          className="shadow-lg rounded border border-border"
+                          renderTextLayer={false}
+                          renderAnnotationLayer={false}
+                        />
+                      </Document>
 
-                {/* License Number */}
-                <div className="bg-muted/30 border border-border rounded-lg p-4">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    License/Certificate Number
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedLicenseNumber}
-                      onChange={(e) => setEditedLicenseNumber(e.target.value)}
-                      placeholder="Optional"
-                      className="w-full px-3 py-2 border border-border rounded-md"
-                    />
-                  ) : (
-                    <p className="text-lg font-mono font-semibold text-foreground">
-                      {editedLicenseNumber || "Not specified"}
-                    </p>
+                      {numPages && numPages > 1 && !pdfLoading && !pdfError && (
+                        <div className="flex items-center gap-3 mt-4 bg-white rounded-lg shadow px-3 py-2">
+                          <button
+                            onClick={goToPreviousPage}
+                            disabled={pageNumber <= 1}
+                            className="p-1 rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <span className="text-sm text-muted-foreground">
+                            Page {pageNumber} of {numPages}
+                          </span>
+                          <button
+                            onClick={goToNextPage}
+                            disabled={pageNumber >= numPages}
+                            className="p-1 rounded hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </div>
 
-                {/* Expiration Date */}
-                <div className="bg-muted/30 border border-border rounded-lg p-4">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Expiration Date</label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={editedExpiration}
-                      onChange={(e) => setEditedExpiration(e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-md"
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold text-foreground">
-                      {editedExpiration ? new Date(editedExpiration).toLocaleDateString() : "Not specified"}
-                    </p>
-                  )}
-                </div>
-
-                {/* Jurisdiction */}
-                <div className="bg-muted/30 border border-border rounded-lg p-4">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Jurisdiction</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedJurisdiction}
-                      onChange={(e) => setEditedJurisdiction(e.target.value)}
-                      placeholder="e.g., Illinois, Texas"
-                      className="w-full px-3 py-2 border border-border rounded-md"
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold text-foreground">{editedJurisdiction || "Not specified"}</p>
+                  {getFileType() === "unknown" && (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                      <FileText className="h-16 w-16 mb-4" />
+                      <p className="text-sm">Preview not available for this file type</p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Action Button */}
-              <div className="flex justify-end">
-                <button
-                  onClick={handleSave}
-                  className="px-6 py-2.5 bg-[#3b82f6] text-white rounded-md font-medium hover:bg-[#3b82f6]/90 transition-colors"
-                >
-                  Confirm & Save
-                </button>
+              <div className="w-1/2 overflow-y-auto space-y-4">
+                {duplicateCheck?.isDuplicate && (
+                  <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4">
+                    <div className="flex gap-3">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                          Possible Duplicate Detected
+                        </h3>
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                          A document with the same license number ({editedLicenseNumber}) for {editedOwnerName} already
+                          exists in the system.
+                        </p>
+                        {duplicateCheck.existingDocument && (
+                          <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+                            Existing: {duplicateCheck.existingDocument.document_type} •{" "}
+                            {duplicateCheck.existingDocument.expiration_date
+                              ? `Expires ${new Date(duplicateCheck.existingDocument.expiration_date).toLocaleDateString()}`
+                              : "No expiration"}{" "}
+                            •{" "}
+                            {duplicateCheck.existingDocument.created_at
+                              ? `Uploaded ${new Date(duplicateCheck.existingDocument.created_at).toLocaleDateString()}`
+                              : ""}
+                          </div>
+                        )}
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+                          You can still proceed to save this as a new document, or cancel and delete the old one first.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {duplicateCheck?.isRenewal && (
+                  <div className="rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
+                    <div className="flex gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="text-sm font-medium text-green-800 dark:text-green-200">Renewal Detected</h3>
+                        <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                          This document is a renewal of the existing document ({duplicateCheck.documentToMarkHistorical}
+                          ).
+                        </p>
+                        <p className="text-sm text-green-700 dark:text-green-300 mt-2">
+                          The existing document will be marked as historical.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {duplicateCheck?.isHistorical && (
+                  <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
+                    <div className="flex gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">Historical Document</h3>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                          This document will be saved as historical.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-foreground">Extracted Information</h3>
+                  <button
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="flex items-center gap-2 text-sm text-[#3b82f6] hover:underline"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    {isEditing ? "Done Editing" : "Edit Information"}
+                  </button>
+                </div>
+
+                <p className="text-sm text-muted-foreground -mt-2">
+                  Review the extracted data against the original document on the left.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="bg-blue-50 border border-[#3b82f6]/20 rounded-lg p-3">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Document Type</label>
+                    {isEditing ? (
+                      <select
+                        value={editedType}
+                        onChange={(e) => setEditedType(e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md text-sm"
+                      >
+                        <option value="Medical License">Medical License</option>
+                        <option value="Occupational Therapy Assistant License">
+                          Occupational Therapy Assistant License
+                        </option>
+                        <option value="Nursing License">Nursing License</option>
+                        <option value="DEA Certificate">DEA Certificate</option>
+                        <option value="Facility Permit">Facility Permit</option>
+                        <option value="Insurance Card">Insurance Card</option>
+                        <option value="Certification">Certification</option>
+                        <option value="Background Check">Background Check</option>
+                        <option value="Payer Contract">Payer Contract</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    ) : (
+                      <p className="text-base font-semibold text-foreground">{editedType}</p>
+                    )}
+                  </div>
+
+                  <div className="bg-muted/30 border border-border rounded-lg p-3">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Owner Type</label>
+                    {isEditing ? (
+                      <select
+                        value={editedOwnerType}
+                        onChange={(e) => setEditedOwnerType(e.target.value as any)}
+                        className="w-full px-3 py-2 border border-border rounded-md text-sm"
+                      >
+                        <option value="staff">Staff Member</option>
+                        <option value="facility">Facility</option>
+                        <option value="payer">Payer</option>
+                        <option value="organization">Organization</option>
+                      </select>
+                    ) : (
+                      <p className="text-base font-semibold text-foreground capitalize">{editedOwnerType}</p>
+                    )}
+                  </div>
+
+                  <div className="bg-muted/30 border border-border rounded-lg p-3">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Owner Name</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedOwnerName}
+                        onChange={(e) => setEditedOwnerName(e.target.value)}
+                        placeholder="Staff name, facility name, or payer name"
+                        className="w-full px-3 py-2 border border-border rounded-md text-sm"
+                      />
+                    ) : (
+                      <p className="text-base font-semibold text-foreground">{editedOwnerName || "Not specified"}</p>
+                    )}
+                  </div>
+
+                  <div className="bg-muted/30 border border-border rounded-lg p-3">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                      License/Certificate Number
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedLicenseNumber}
+                        onChange={(e) => setEditedLicenseNumber(e.target.value)}
+                        placeholder="Optional"
+                        className="w-full px-3 py-2 border border-border rounded-md text-sm"
+                      />
+                    ) : (
+                      <p className="text-base font-mono font-semibold text-foreground">
+                        {editedLicenseNumber || "Not specified"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="bg-muted/30 border border-border rounded-lg p-3">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Expiration Date</label>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={editedExpiration}
+                        onChange={(e) => setEditedExpiration(e.target.value)}
+                        className="w-full px-3 py-2 border border-border rounded-md text-sm"
+                      />
+                    ) : (
+                      <p className="text-base font-semibold text-foreground">
+                        {editedExpiration ? new Date(editedExpiration).toLocaleDateString() : "Not specified"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="bg-muted/30 border border-border rounded-lg p-3">
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Jurisdiction</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedJurisdiction}
+                        onChange={(e) => setEditedJurisdiction(e.target.value)}
+                        placeholder="e.g., Illinois, Texas"
+                        className="w-full px-3 py-2 border border-border rounded-md text-sm"
+                      />
+                    ) : (
+                      <p className="text-base font-semibold text-foreground">{editedJurisdiction || "Not specified"}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={handleSave}
+                    className="px-6 py-2.5 bg-[#3b82f6] text-white rounded-md font-medium hover:bg-[#3b82f6]/90 transition-colors"
+                  >
+                    Confirm & Save
+                  </button>
+                </div>
               </div>
             </div>
           )}

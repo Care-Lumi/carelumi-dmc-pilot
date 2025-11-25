@@ -4,17 +4,22 @@ import { sql, DMC_ORG_ID } from "@/lib/db"
 export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
+  console.log("[v0] check-duplicate API called")
+
   try {
-    const { licenseNumber, ownerName, expirationDate } = await request.json()
+    const body = await request.json()
+    const { licenseNumber, ownerName, expirationDate } = body
 
     console.log("[v0] Checking for duplicates/renewals:", { licenseNumber, ownerName, expirationDate })
 
     if (!licenseNumber || !ownerName) {
-      return NextResponse.json({ isDuplicate: false, isRenewal: false })
+      console.log("[v0] Missing required fields, returning no duplicate")
+      return NextResponse.json({ isDuplicate: false, isRenewal: false, isHistorical: false })
     }
 
     // Normalize owner name for matching
     const ownerNormalized = ownerName.toLowerCase().replace(/[^a-z0-9]/g, "")
+    console.log("[v0] Normalized owner name:", ownerNormalized)
 
     // Find matching documents by license number and owner
     const result = await sql`
@@ -33,23 +38,28 @@ export async function POST(request: NextRequest) {
       ORDER BY expires_at DESC
     `
 
+    console.log("[v0] Found matching documents:", result.length)
+
     if (result.length === 0) {
       console.log("[v0] No matching documents found")
-      return NextResponse.json({ isDuplicate: false, isRenewal: false })
+      return NextResponse.json({ isDuplicate: false, isRenewal: false, isHistorical: false })
     }
 
     // Check if any have the exact same expiration date
     const newExpDate = expirationDate ? new Date(expirationDate).toISOString().split("T")[0] : null
+    console.log("[v0] New document expiration date:", newExpDate)
 
     for (const doc of result) {
       const existingExpDate = doc.expiration_date ? new Date(doc.expiration_date).toISOString().split("T")[0] : null
+      console.log("[v0] Comparing with existing doc:", { id: doc.id, expDate: existingExpDate })
 
       if (existingExpDate === newExpDate) {
         // TRUE DUPLICATE - same license, owner, AND expiration
-        console.log("[v0] Found true duplicate:", doc)
+        console.log("[v0] Found true duplicate:", doc.id)
         return NextResponse.json({
           isDuplicate: true,
           isRenewal: false,
+          isHistorical: false,
           existingDocument: doc,
         })
       }
@@ -60,12 +70,15 @@ export async function POST(request: NextRequest) {
     const newestExpDate = newestDoc.expiration_date ? new Date(newestDoc.expiration_date) : null
     const uploadExpDate = newExpDate ? new Date(newExpDate) : null
 
+    console.log("[v0] Comparing dates - newest existing:", newestExpDate, "new upload:", uploadExpDate)
+
     if (newestExpDate && uploadExpDate && uploadExpDate > newestExpDate) {
       // RENEWAL - new expiration is later than existing
       console.log("[v0] This is a renewal (newer expiration)")
       return NextResponse.json({
         isDuplicate: false,
         isRenewal: true,
+        isHistorical: false,
         existingDocument: newestDoc,
         documentToMarkHistorical: newestDoc.id,
       })
@@ -80,9 +93,20 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ isDuplicate: false, isRenewal: false })
+    console.log("[v0] No duplicate/renewal/historical status detected")
+    return NextResponse.json({ isDuplicate: false, isRenewal: false, isHistorical: false })
   } catch (error) {
     console.error("[v0] Error checking for duplicates:", error)
-    return NextResponse.json({ error: "Failed to check for duplicates" }, { status: 500 })
+    // Return JSON error instead of letting it bubble up as HTML
+    return NextResponse.json(
+      {
+        error: "Failed to check for duplicates",
+        details: error instanceof Error ? error.message : String(error),
+        isDuplicate: false,
+        isRenewal: false,
+        isHistorical: false,
+      },
+      { status: 500 },
+    )
   }
 }
