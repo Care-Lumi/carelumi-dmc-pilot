@@ -280,10 +280,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
-// Configure API route
-export const config = {
-  api: {
-    bodyParser: false, // Disable body parsing, we'll use formData
-  },
-}
