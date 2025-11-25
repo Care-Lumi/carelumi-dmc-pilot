@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { getOrgByAccessCode } from "@/lib/organizations"
+import { sql } from "@/lib/db"
 
 const getSessionSecret = () => {
   return process.env.PILOT_SESSION_SECRET || "carelumi-pilot-session-secret"
@@ -6,36 +8,53 @@ const getSessionSecret = () => {
 
 export async function POST(request: NextRequest) {
   try {
-    const { password } = await request.json()
+    const { accessCode } = await request.json()
 
-    // Check password against environment variable
-    const validPassword = process.env.PILOT_PASSWORD
-
-    if (!validPassword) {
-      console.error("[CareLumi] PILOT_PASSWORD environment variable not set")
-      return NextResponse.json({ error: "Authentication not configured" }, { status: 500 })
+    if (!accessCode) {
+      return NextResponse.json({ error: "Access code required" }, { status: 400 })
     }
 
-    if (password === validPassword) {
-      // Create response with session cookie
-      const response = NextResponse.json({ success: true })
+    const org = getOrgByAccessCode(accessCode)
 
-      const sessionSecret = getSessionSecret()
-      console.log("[v0] Setting session cookie with secret")
-
-      response.cookies.set("pilot_session", sessionSecret, {
-        httpOnly: true,
-        secure: true, // Must be true for sameSite: "none"
-        sameSite: "none", // Required for cross-origin in Vercel preview
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        path: "/",
-      })
-
-      return response
+    if (!org) {
+      return NextResponse.json({ error: "Invalid access code" }, { status: 401 })
     }
 
-    // Invalid password
-    return NextResponse.json({ error: "Invalid password" }, { status: 401 })
+    console.log(`[v0] Access code matched for org: ${org.id}`)
+
+    try {
+      await sql`
+        INSERT INTO organizations (id, name, primary_contact_name, primary_contact_email)
+        VALUES (${org.id}, ${org.fullName}, ${org.primaryContact.name}, ${org.primaryContact.email})
+        ON CONFLICT (id) DO NOTHING
+      `
+      console.log(`[v0] Organization ${org.id} seeded in database`)
+    } catch (dbError) {
+      console.error("[v0] Database seed error:", dbError)
+      // Continue even if database seed fails - not critical for auth
+    }
+
+    const response = NextResponse.json({
+      success: true,
+      orgId: org.id,
+      orgName: org.shortName,
+    })
+
+    const sessionSecret = getSessionSecret()
+    const cookieOptions = {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none" as const,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    }
+
+    response.cookies.set("pilot_session", sessionSecret, cookieOptions)
+    response.cookies.set("org_id", org.id, cookieOptions)
+
+    console.log(`[v0] Set cookies: pilot_session and org_id=${org.id}`)
+
+    return response
   } catch (error) {
     console.error("[CareLumi] Login error:", error)
     return NextResponse.json({ error: "Authentication failed" }, { status: 500 })

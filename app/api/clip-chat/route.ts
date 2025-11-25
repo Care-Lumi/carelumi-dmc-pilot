@@ -1,13 +1,49 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { searchKnowledgeBase, buildContext } from "@/lib/knowledge-base/retrieval"
+import { getOrgIdServer } from "@/lib/auth/server"
+import { getOrgById } from "@/lib/organizations"
 
-const CLIP_SYSTEM_PROMPT = `You are Clip, CareLumi's AI compliance assistant. You help Ambulatory Surgery Center (ASC) administrators with compliance, regulatory, and operational questions.
+const ORG_TYPE_CONTEXT = {
+  surgery_center: `
+You are helping an Ambulatory Surgery Center (ASC) with compliance and operations.
+Focus on:
+- ASC licensing and CMS regulations
+- Medicare/Medicaid ASC payment rules
+- Surgical credentialing and provider enrollment
+- OR safety and equipment standards
+- Outpatient surgery compliance
+`,
+
+  pediatric_therapy: `
+You are helping a pediatric therapy practice with compliance and operations.
+Focus on:
+- Early intervention program requirements
+- Speech-language pathology (SLP) licensing
+- Occupational therapy (OT) and physical therapy (PT) regulations
+- IFSP documentation and family-centered practices
+- Pediatric Medicaid and commercial payer credentialing
+- Developmental screening standards
+`,
+
+  behavioral_health: `
+You are helping a behavioral health practice with compliance and operations.
+Focus on:
+- Mental health licensing requirements
+- HIPAA and patient confidentiality in behavioral health
+- Medicaid MCO credentialing for therapists
+- Treatment plan documentation standards
+- Mandated reporter requirements
+- Clinical supervision for pre-licensed staff
+- Telehealth documentation for mental health services
+`,
+}
+
+const CLIP_SYSTEM_PROMPT = `You are Clip, CareLumi's AI compliance assistant. You help healthcare administrators with compliance, regulatory, and operational questions.
 
 Key guidelines:
 - Be helpful, professional, and concise
-- Focus on multi-state ASC operations, compliance, and credentialing
+- Focus on compliance, operations, and credentialing
 - Reference specific requirements when applicable
-- Never reference caregiving - CareLumi is about ASC compliance and operations
 - Use the provided knowledge base context to answer questions accurately
 - Always provide helpful guidance based on the information available
 - NEVER say "I don't know" or "I don't have information"
@@ -98,13 +134,20 @@ If a question requires information beyond your knowledge base:
 - Focus on platform capabilities and concrete benefits
 - Only bring up upgrading when contextually appropriate
 
-Remember: You're assisting with ASC compliance, licensing, inspections, staff training, patient safety, regulatory requirements, multi-state operations, and the CareLumi platform features.`
+Remember: You're assisting with licensing, inspections, staff training, patient safety, regulatory requirements, multi-state operations, and the CareLumi platform features.`
 
 export async function POST(request: Request) {
   try {
     console.log("[v0] Clip chat API called")
+
+    const orgId = await getOrgIdServer()
+    const org = orgId ? getOrgById(orgId) : null
+
+    const orgContext = org ? ORG_TYPE_CONTEXT[org.type] : ""
+
     const { messages } = await request.json()
     console.log("[v0] Messages received:", messages.length)
+    console.log(`[v0] Organization context: ${org?.shortName} (${org?.type})`)
 
     // Get the latest user message
     const latestMessage = messages[messages.length - 1]
@@ -123,8 +166,9 @@ export async function POST(request: Request) {
     const context = buildContext(searchResults)
     console.log("[v0] Context built, length:", context.length)
 
-    // Create enhanced system message with context
     const systemMessageContent = `${CLIP_SYSTEM_PROMPT}
+
+${orgContext}
 
 ${context}
 

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sql, DMC_ORG_ID } from "@/lib/db"
+import { sql } from "@/lib/db"
+import { getOrgIdServer } from "@/lib/auth/server"
 
 export const runtime = "nodejs"
 
@@ -7,6 +8,11 @@ export async function POST(request: NextRequest) {
   console.log("[v0] check-duplicate API called")
 
   try {
+    const orgId = await getOrgIdServer()
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 401 })
+    }
+
     const body = await request.json()
     const { licenseNumber, ownerName, expirationDate } = body
 
@@ -32,7 +38,7 @@ export async function POST(request: NextRequest) {
         status,
         created_at
       FROM documents 
-      WHERE org_id = ${DMC_ORG_ID}
+      WHERE org_id = ${orgId}
         AND license_number = ${licenseNumber}
         AND owner_normalized = ${ownerNormalized}
       ORDER BY expires_at DESC

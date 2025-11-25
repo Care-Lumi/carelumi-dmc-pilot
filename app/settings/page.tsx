@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Building2, User } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useOrg } from "@/lib/contexts/org-context"
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
@@ -47,6 +48,28 @@ export default function SettingsPage() {
     { id: "profile", label: "User Profile", icon: User },
     { id: "organization", label: "Organization", icon: Building2 },
   ]
+
+  const { org } = useOrg()
+
+  useEffect(() => {
+    if (org) {
+      setOrgSettings({
+        name: org.fullName,
+        type: org.type,
+        taxId: "",
+        npi: "",
+        address: "",
+      })
+      setAdminProfile({
+        firstName: org.primaryContact.name.split(" ")[0] || "",
+        lastName: org.primaryContact.name.split(" ").slice(1).join(" ") || "",
+        email: org.primaryContact.email,
+        phone: "",
+        jobTitle: "",
+        department: "",
+      })
+    }
+  }, [org])
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab")
@@ -291,44 +314,38 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
-                  <div>
+                  <div className="col-span-2">
                     <Label className="text-[13px] font-medium text-[#333333] mb-2">Organization Name</Label>
                     <Input
-                      placeholder="Enter organization name"
+                      placeholder="Organization name"
                       value={orgSettings.name}
-                      onChange={(e) => setOrgSettings({ ...orgSettings, name: e.target.value })}
+                      disabled
+                      className="bg-muted cursor-not-allowed"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Organization name cannot be changed</p>
+                  </div>
+                  <div>
+                    <Label className="text-[13px] font-medium text-[#333333] mb-2">Primary Contact Name</Label>
+                    <Input
+                      placeholder="Enter primary contact name"
+                      value={`${adminProfile.firstName} ${adminProfile.lastName}`}
+                      onChange={(e) => {
+                        const names = e.target.value.split(" ")
+                        setAdminProfile({
+                          ...adminProfile,
+                          firstName: names[0] || "",
+                          lastName: names.slice(1).join(" ") || "",
+                        })
+                      }}
                     />
                   </div>
                   <div>
-                    <Label className="text-[13px] font-medium text-[#333333] mb-2">Organization Type</Label>
+                    <Label className="text-[13px] font-medium text-[#333333] mb-2">Primary Contact Email</Label>
                     <Input
-                      placeholder="Enter organization type"
-                      value={orgSettings.type}
-                      onChange={(e) => setOrgSettings({ ...orgSettings, type: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[13px] font-medium text-[#333333] mb-2">Tax ID</Label>
-                    <Input
-                      placeholder="Enter Tax ID"
-                      value={orgSettings.taxId}
-                      onChange={(e) => setOrgSettings({ ...orgSettings, taxId: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[13px] font-medium text-[#333333] mb-2">NPI Number</Label>
-                    <Input
-                      placeholder="Enter NPI number"
-                      value={orgSettings.npi}
-                      onChange={(e) => setOrgSettings({ ...orgSettings, npi: e.target.value })}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-[13px] font-medium text-[#333333] mb-2">Business Address</Label>
-                    <Input
-                      placeholder="Enter business address"
-                      value={orgSettings.address}
-                      onChange={(e) => setOrgSettings({ ...orgSettings, address: e.target.value })}
+                      placeholder="Enter primary contact email"
+                      value={adminProfile.email}
+                      type="email"
+                      onChange={(e) => setAdminProfile({ ...adminProfile, email: e.target.value })}
                     />
                   </div>
                 </div>

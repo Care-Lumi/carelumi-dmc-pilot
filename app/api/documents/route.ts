@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sql, DMC_ORG_ID } from "@/lib/db"
+import { sql } from "@/lib/db"
+import { getOrgIdServer } from "@/lib/auth/server"
 import { put } from "@vercel/blob"
 import { decorateWithDerivedFields } from "@/lib/utils/document-helpers"
 
@@ -8,6 +9,11 @@ export const runtime = "nodejs"
 // GET /api/documents - Fetch all documents for the org
 export async function GET(request: NextRequest) {
   try {
+    const orgId = await getOrgIdServer()
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 401 })
+    }
+
     const result = await sql`
       SELECT 
         id,
@@ -23,7 +29,7 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at
       FROM documents 
-      WHERE org_id = ${DMC_ORG_ID} 
+      WHERE org_id = ${orgId} 
       ORDER BY created_at DESC
     `
 
@@ -39,6 +45,11 @@ export async function GET(request: NextRequest) {
 // POST /api/documents - Save a new document
 export async function POST(request: NextRequest) {
   try {
+    const orgId = await getOrgIdServer()
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 401 })
+    }
+
     const formData = await request.formData()
     const file = formData.get("file") as File
     const docType = formData.get("docType") as string
@@ -111,7 +122,7 @@ export async function POST(request: NextRequest) {
         classification_raw, status
       ) VALUES (
         ${docId}, 
-        ${DMC_ORG_ID}, 
+        ${orgId}, 
         ${blob.url}, 
         ${file.name},
         ${docType}, 
@@ -133,7 +144,7 @@ export async function POST(request: NextRequest) {
       const staffId = `staff_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       await sql`
         INSERT INTO staff (id, org_id, name, status)
-        VALUES (${staffId}, ${DMC_ORG_ID}, ${ownerName}, 'active')
+        VALUES (${staffId}, ${orgId}, ${ownerName}, 'active')
         ON CONFLICT (org_id, name) DO NOTHING
       `
       console.log("[v0] Staff member created/updated:", ownerName)
@@ -141,14 +152,14 @@ export async function POST(request: NextRequest) {
       const facilityId = `fac_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       await sql`
         INSERT INTO facilities (id, org_id, name, state, status)
-        VALUES (${facilityId}, ${DMC_ORG_ID}, ${ownerName}, ${jurisdiction}, 'active')
+        VALUES (${facilityId}, ${orgId}, ${ownerName}, ${jurisdiction}, 'active')
         ON CONFLICT (org_id, name) DO NOTHING
       `
     } else if (ownerName && ownerType === "payer") {
       const payerId = `payer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       await sql`
         INSERT INTO payers (id, org_id, name, status)
-        VALUES (${payerId}, ${DMC_ORG_ID}, ${ownerName}, 'active')
+        VALUES (${payerId}, ${orgId}, ${ownerName}, 'active')
         ON CONFLICT (org_id, name) DO NOTHING
       `
     }

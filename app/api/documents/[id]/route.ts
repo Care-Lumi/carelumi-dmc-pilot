@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sql, DMC_ORG_ID } from "@/lib/db"
+import { sql } from "@/lib/db"
+import { getOrgIdServer } from "@/lib/auth/server"
 import { del } from "@vercel/blob"
 
 export const runtime = "nodejs"
@@ -7,11 +8,16 @@ export const runtime = "nodejs"
 // DELETE /api/documents/[id] - Delete a document
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const orgId = await getOrgIdServer()
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 401 })
+    }
+
     const { id } = await params
 
     // First, get the document to retrieve the blob URL
     const [document] = await sql`
-      SELECT file_url FROM documents WHERE id = ${id} AND org_id = ${DMC_ORG_ID}
+      SELECT file_url FROM documents WHERE id = ${id} AND org_id = ${orgId}
     `
 
     if (!document) {
@@ -29,7 +35,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     // Delete from database
     await sql`
-      DELETE FROM documents WHERE id = ${id} AND org_id = ${DMC_ORG_ID}
+      DELETE FROM documents WHERE id = ${id} AND org_id = ${orgId}
     `
 
     console.log("[v0] Document deleted:", id)

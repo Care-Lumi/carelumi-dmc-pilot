@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 
 import { UpgradeOverlayProvider } from "@/lib/contexts/upgrade-overlay-context"
+import { OrgProvider } from "@/lib/contexts/org-context"
 import { ElevenLabsProvider } from "@/components/providers/elevenlabs-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { AuthGate } from "@/components/auth-gate"
@@ -57,13 +58,22 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const isPreview = process.env.NEXT_PUBLIC_ENV === "preview"
+
   return (
     <html lang="en">
       <body className={`${_inter.variable} ${_geistMono.variable} font-sans antialiased`}>
         <ErrorBoundary>
           <ElevenLabsProvider />
           <AuthGate>
-            <UpgradeOverlayProvider>{children}</UpgradeOverlayProvider>
+            <OrgProvider>
+              {isPreview && (
+                <div className="bg-amber-500 text-amber-950 px-4 py-2 text-center text-sm font-medium">
+                  Preview Environment - Multi-Tenant Feature Branch
+                </div>
+              )}
+              <UpgradeOverlayProvider>{children}</UpgradeOverlayProvider>
+            </OrgProvider>
           </AuthGate>
         </ErrorBoundary>
         <Analytics />

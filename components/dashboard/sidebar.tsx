@@ -24,6 +24,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ClipChatModal } from "@/components/dashboard/clip-chat-modal"
 import { ClipVoiceModal } from "@/components/dashboard/clip-voice-modal"
 import { userData } from "@/lib/dmc-pilot-data"
+import { ProBadge } from "@/components/pro-badge"
+import { useOrg } from "@/lib/contexts/org-context"
 
 const SidebarContext = createContext<{ collapsed: boolean }>({ collapsed: false })
 
@@ -52,6 +54,7 @@ export function Sidebar() {
   const [showClipVoice, setShowClipVoice] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const { org } = useOrg()
 
   const getInitials = (name: string) => {
     return name
@@ -106,9 +109,15 @@ export function Sidebar() {
           <div className="flex h-16 items-center justify-between border-b border-border px-4">
             <Link href="/dashboard" className="flex items-center gap-2">
               {collapsed ? (
-                <img src="/images/carelumi-thumbnail-transparent.png" alt="CareLumi" className="h-8 w-8" />
+                <div className="flex flex-col items-center gap-1">
+                  <img src="/images/carelumi-thumbnail-transparent.png" alt="CareLumi" className="h-8 w-8" />
+                  {org && <ProBadge tier={org.tier} className="text-[10px] px-1.5 py-0" />}
+                </div>
               ) : (
-                <img src="/images/carelumi-thumbnail-transparent.png" alt="CareLumi" className="h-10" />
+                <div className="flex items-center gap-2">
+                  <img src="/images/carelumi-thumbnail-transparent.png" alt="CareLumi" className="h-10" />
+                  {org && <ProBadge tier={org.tier} />}
+                </div>
               )}
             </Link>
             <Button variant="ghost" size="icon" onClick={toggleCollapsed} className="h-8 w-8">
