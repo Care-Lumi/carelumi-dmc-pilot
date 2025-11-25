@@ -22,15 +22,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ org: null }, { status: 200 })
   }
 
-  // Return safe org data (no access code)
+  // Return safe org data with flattened fields for frontend
   return NextResponse.json({
     org: {
       id: org.id,
+      name: org.shortName, // Components expect "name"
       shortName: org.shortName,
       fullName: org.fullName,
       type: org.type,
       tier: org.tier,
-      primaryContact: org.primaryContact,
+      primaryContactName: org.primaryContact.name, // Components expect "primaryContactName"
+      primaryContactEmail: org.primaryContact.email, // Flatten for convenience
+      primaryContact: org.primaryContact, // Keep nested for backwards compatibility
       useRealData: org.useRealData,
     },
   })
