@@ -2,11 +2,15 @@
 
 import { createContext, useContext, type ReactNode } from "react"
 import { useSessionTracker } from "@/lib/hooks/use-session-tracker"
+import { usePathname } from "next/navigation"
 
 const SessionContext = createContext<ReturnType<typeof useSessionTracker> | null>(null)
 
 export function SessionTrackerProvider({ children }: { children: ReactNode }) {
-  const sessionTracker = useSessionTracker()
+  const pathname = usePathname()
+  const isLoginPage = pathname === "/pilot-login"
+
+  const sessionTracker = useSessionTracker({ disabled: isLoginPage })
 
   return <SessionContext.Provider value={sessionTracker}>{children}</SessionContext.Provider>
 }

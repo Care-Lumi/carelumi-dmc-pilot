@@ -9,8 +9,7 @@ const getSessionSecret = () => {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow pilot login page
-  if (pathname === "/pilot-login") {
+  if (pathname === "/pilot-login" || pathname.startsWith("/pilot-login/")) {
     return NextResponse.next()
   }
 
@@ -50,8 +49,8 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except static files
+     * Match all request paths except static files, API routes, and login
      */
-    "/((?!_next/static|_next/image|favicon.ico|images|api).*)",
+    "/((?!_next/static|_next/image|favicon.ico|images|api|pilot-login).*)",
   ],
 }

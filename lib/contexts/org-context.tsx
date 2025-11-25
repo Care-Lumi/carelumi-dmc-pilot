@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { type Organization, getOrgById } from "@/lib/organizations"
+import { usePathname } from "next/navigation"
 
 interface OrgContextType {
   org: Organization | null
@@ -17,9 +18,15 @@ const OrgContext = createContext<OrgContextType>({
 export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [org, setOrg] = useState<Organization | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const pathname = usePathname()
+  const isLoginPage = pathname === "/pilot-login"
 
   useEffect(() => {
-    // Read org_id from cookies (client-side)
+    if (isLoginPage) {
+      setIsLoading(false)
+      return
+    }
+
     const cookies = document.cookie.split("; ")
     const orgIdCookie = cookies.find((c) => c.startsWith("org_id="))
 
@@ -30,7 +37,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsLoading(false)
-  }, [])
+  }, [isLoginPage])
 
   return <OrgContext.Provider value={{ org, isLoading }}>{children}</OrgContext.Provider>
 }

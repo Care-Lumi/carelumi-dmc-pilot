@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from "uuid"
  * - Sends heartbeat every 60 seconds (only if tab is visible)
  * - Ends session on logout or browser close (beforeunload)
  */
-export function useSessionTracker() {
+export function useSessionTracker({ disabled = false }: { disabled?: boolean } = {}) {
   const pathname = usePathname()
   const sessionIdRef = useRef<string | null>(null)
   const pageViewCountRef = useRef(0)
@@ -22,6 +22,10 @@ export function useSessionTracker() {
 
   // Initialize session on mount
   useEffect(() => {
+    if (disabled) {
+      return
+    }
+
     initializeSession()
 
     // Cleanup on unmount
@@ -30,10 +34,14 @@ export function useSessionTracker() {
         clearInterval(heartbeatIntervalRef.current)
       }
     }
-  }, [])
+  }, [disabled])
 
   // Track page views on route change
   useEffect(() => {
+    if (disabled) {
+      return
+    }
+
     // Skip if this is the first render or same page
     if (!previousPathRef.current || previousPathRef.current === pathname) {
       previousPathRef.current = pathname
@@ -42,7 +50,7 @@ export function useSessionTracker() {
 
     trackPageView(pathname)
     previousPathRef.current = pathname
-  }, [pathname])
+  }, [pathname, disabled])
 
   async function initializeSession() {
     // Check if session already exists in cookie
@@ -173,7 +181,7 @@ export function useSessionTracker() {
 
   return {
     sessionId: sessionIdRef.current,
-    endSession,
-    incrementClickCount,
+    endSession: disabled ? () => {} : endSession,
+    incrementClickCount: disabled ? () => {} : incrementClickCount,
   }
 }
