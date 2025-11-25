@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import { type Organization, getOrgById } from "@/lib/organizations"
+import type { Organization } from "@/lib/organizations"
 import { usePathname } from "next/navigation"
 
 interface OrgContextType {
@@ -27,17 +27,23 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    const cookies = document.cookie.split("; ")
-    const orgIdCookie = cookies.find((c) => c.startsWith("org_id="))
+    async function fetchCurrentOrg() {
+      try {
+        const response = await fetch("/api/auth/current-org")
+        const data = await response.json()
 
-    if (orgIdCookie) {
-      const orgId = orgIdCookie.split("=")[1]
-      const organization = getOrgById(orgId)
-      setOrg(organization)
+        if (data.org) {
+          setOrg(data.org)
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch current org:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    setIsLoading(false)
-  }, [isLoginPage])
+    fetchCurrentOrg()
+  }, [isLoginPage, pathname])
 
   return <OrgContext.Provider value={{ org, isLoading }}>{children}</OrgContext.Provider>
 }
