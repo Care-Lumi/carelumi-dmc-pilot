@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Building2, User } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Building2, User, Bell, Shield, Key, CreditCard } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useOrg } from "@/lib/contexts/org-context"
 
@@ -44,9 +45,27 @@ export default function SettingsPage() {
     address: "",
   })
 
+  const [notifications, setNotifications] = useState({
+    emailAlerts: true,
+    expirationReminders: true,
+    complianceUpdates: true,
+    weeklyReports: false,
+    smsNotifications: false,
+  })
+
+  const [security, setSecurity] = useState({
+    twoFactorEnabled: false,
+    sessionTimeout: "30",
+    passwordLastChanged: "2024-10-15",
+  })
+
   const tabs = [
     { id: "profile", label: "User Profile", icon: User },
     { id: "organization", label: "Organization", icon: Building2 },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "security", label: "Security", icon: Shield },
+    { id: "billing", label: "Billing", icon: CreditCard },
+    { id: "api", label: "API Access", icon: Key },
   ]
 
   const { org } = useOrg()
@@ -89,12 +108,10 @@ export default function SettingsPage() {
   }, [])
 
   const handleSave = () => {
-    // TODO: Implement save to database
-    console.log("Saving settings:", { adminProfile, orgSettings })
+    console.log("Saving settings:", { adminProfile, orgSettings, notifications, security })
   }
 
   const handleCancel = () => {
-    // Reset to empty or refetch from database
     if (activeTab === "profile") {
       setAdminProfile({
         firstName: "",
@@ -104,8 +121,8 @@ export default function SettingsPage() {
         jobTitle: "",
         department: "",
       })
-      setAvatarUrl(null) // Reset avatar URL on cancel
-    } else {
+      setAvatarUrl(null)
+    } else if (activeTab === "organization") {
       setOrgSettings({
         name: "",
         type: "",
@@ -120,13 +137,11 @@ export default function SettingsPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       alert("Please select an image file")
       return
     }
 
-    // Validate file size (2MB max)
     if (file.size > 2 * 1024 * 1024) {
       alert("File size must be less than 2MB")
       return
@@ -135,7 +150,6 @@ export default function SettingsPage() {
     setIsUploadingAvatar(true)
 
     try {
-      // Upload to Blob storage
       const formData = new FormData()
       formData.append("file", file)
 
@@ -357,6 +371,242 @@ export default function SettingsPage() {
                   <Button variant="default" onClick={handleSave}>
                     Save
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notifications Tab */}
+          {activeTab === "notifications" && (
+            <Card className="border border-[#e5e7eb] shadow-sm rounded-[12px]">
+              <CardHeader className="border-b border-[#e5e7eb] px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <Bell className="w-5 h-5 text-[#0066FF]" />
+                  <CardTitle className="text-[18px] font-semibold">Notification Preferences</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium">Email Alerts</Label>
+                      <p className="text-xs text-muted-foreground">Receive email notifications for important updates</p>
+                    </div>
+                    <Switch
+                      checked={notifications.emailAlerts}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, emailAlerts: checked })}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium">Expiration Reminders</Label>
+                      <p className="text-xs text-muted-foreground">Get notified about expiring credentials</p>
+                    </div>
+                    <Switch
+                      checked={notifications.expirationReminders}
+                      onCheckedChange={(checked) =>
+                        setNotifications({ ...notifications, expirationReminders: checked })
+                      }
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium">Compliance Updates</Label>
+                      <p className="text-xs text-muted-foreground">Stay informed about regulatory changes</p>
+                    </div>
+                    <Switch
+                      checked={notifications.complianceUpdates}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, complianceUpdates: checked })}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium">Weekly Reports</Label>
+                      <p className="text-xs text-muted-foreground">Receive weekly compliance status reports</p>
+                    </div>
+                    <Switch
+                      checked={notifications.weeklyReports}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, weeklyReports: checked })}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium">SMS Notifications</Label>
+                      <p className="text-xs text-muted-foreground">Urgent alerts via text message</p>
+                    </div>
+                    <Switch
+                      checked={notifications.smsNotifications}
+                      onCheckedChange={(checked) => setNotifications({ ...notifications, smsNotifications: checked })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                  <Button variant="default" onClick={handleSave}>
+                    Save
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === "security" && (
+            <Card className="border border-[#e5e7eb] shadow-sm rounded-[12px]">
+              <CardHeader className="border-b border-[#e5e7eb] px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-[#0066FF]" />
+                  <CardTitle className="text-[18px] font-semibold">Security Settings</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div>
+                  <Label className="text-sm font-medium mb-2">Password</Label>
+                  <div className="flex items-center gap-4">
+                    <Input type="password" value="••••••••••" disabled className="flex-1 bg-muted" />
+                    <Button variant="outline">Change Password</Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Last changed: {new Date(security.passwordLastChanged).toLocaleDateString()}
+                  </p>
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Two-Factor Authentication</Label>
+                    <p className="text-xs text-muted-foreground">Add an extra layer of security to your account</p>
+                  </div>
+                  <Switch
+                    checked={security.twoFactorEnabled}
+                    onCheckedChange={(checked) => setSecurity({ ...security, twoFactorEnabled: checked })}
+                  />
+                </div>
+
+                <Separator />
+
+                <div>
+                  <Label className="text-sm font-medium mb-2">Session Timeout</Label>
+                  <select
+                    value={security.sessionTimeout}
+                    onChange={(e) => setSecurity({ ...security, sessionTimeout: e.target.value })}
+                    className="w-full rounded-md border border-border bg-card px-4 py-2 text-sm"
+                  >
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="120">2 hours</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Automatically log out after this period of inactivity
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                  <Button variant="default" onClick={handleSave}>
+                    Save
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Billing Tab */}
+          {activeTab === "billing" && (
+            <Card className="border border-[#e5e7eb] shadow-sm rounded-[12px]">
+              <CardHeader className="border-b border-[#e5e7eb] px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-5 h-5 text-[#0066FF]" />
+                  <CardTitle className="text-[18px] font-semibold">Billing & Subscription</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                    <CreditCard className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">
+                    {org?.tier === "pro" ? "Pro Plan Active" : "Free Trial Active"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    {org?.tier === "pro"
+                      ? "You're on the Pro plan with full access to all features."
+                      : "You're currently on a free trial. Upgrade to unlock all features."}
+                  </p>
+                  <div className="flex justify-center gap-3">
+                    <Button variant="outline">View Billing History</Button>
+                    {org?.tier !== "pro" && <Button>Upgrade to Pro</Button>}
+                  </div>
+                </div>
+                <Separator />
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold">Quick Links</h4>
+                  <div className="grid gap-2">
+                    <a href="/revenue-risk" className="text-sm text-primary hover:underline flex items-center gap-2">
+                      → View Billing Compliance Dashboard
+                    </a>
+                    <a href="/integrations" className="text-sm text-primary hover:underline flex items-center gap-2">
+                      → Manage Payment Integrations
+                    </a>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* API Access Tab */}
+          {activeTab === "api" && (
+            <Card className="border border-[#e5e7eb] shadow-sm rounded-[12px]">
+              <CardHeader className="border-b border-[#e5e7eb] px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <Key className="w-5 h-5 text-[#0066FF]" />
+                  <CardTitle className="text-[18px] font-semibold">API Access</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                    <Key className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">API Access Coming Soon</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Integrate CareLumi with your own applications and workflows. API access will be available for Pro
+                    plan customers.
+                  </p>
+                  <Button variant="outline">Request API Access</Button>
+                </div>
+                <Separator />
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold">What you can do with the API</h4>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>Programmatically upload and manage documents</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>Sync credentialing data with your systems</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>Automate compliance workflows</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span>Access real-time status updates</span>
+                    </li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>
