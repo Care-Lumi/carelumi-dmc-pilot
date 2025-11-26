@@ -12,9 +12,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
-import { Building2, User, Bell, Shield, Key, CreditCard } from "lucide-react"
+import { Building2, User, Bell, Shield, Key, CreditCard, Download, ExternalLink } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useOrg } from "@/lib/contexts/org-context"
+import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
@@ -59,6 +60,12 @@ export default function SettingsPage() {
     passwordLastChanged: "2024-10-15",
   })
 
+  const [orgStats, setOrgStats] = useState({
+    facilities: 0,
+    staff: 0,
+    payers: 0,
+  })
+
   const tabs = [
     { id: "profile", label: "User Profile", icon: User },
     { id: "organization", label: "Organization", icon: Building2 },
@@ -86,6 +93,13 @@ export default function SettingsPage() {
         phone: "",
         jobTitle: "",
         department: "",
+      })
+
+      const sandboxData = getSandboxDataForOrg(org.type)
+      setOrgStats({
+        facilities: sandboxData.SANDBOX_FACILITIES.length,
+        staff: sandboxData.SANDBOX_BILLING_COMPLIANCE.length,
+        payers: sandboxData.SANDBOX_PAYERS.length,
       })
     }
   }, [org])
@@ -362,6 +376,52 @@ export default function SettingsPage() {
                       onChange={(e) => setAdminProfile({ ...adminProfile, email: e.target.value })}
                     />
                   </div>
+                  <div className="col-span-2">
+                    <Label className="text-[13px] font-medium text-[#333333] mb-2">
+                      National Provider Identifier (NPI)
+                    </Label>
+                    <Input
+                      placeholder="Enter organization NPI"
+                      value={orgSettings.npi}
+                      onChange={(e) => setOrgSettings({ ...orgSettings, npi: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">10-digit NPI number for your organization</p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-sm font-semibold mb-4">Organization Statistics</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card className="border border-border">
+                      <CardContent className="p-4">
+                        <p className="text-xs text-muted-foreground">Number of Facilities</p>
+                        <p className="text-2xl font-bold mt-1">{orgStats.facilities}</p>
+                        <a href="/facilities" className="text-xs text-primary hover:underline mt-1 inline-block">
+                          View Facilities →
+                        </a>
+                      </CardContent>
+                    </Card>
+                    <Card className="border border-border">
+                      <CardContent className="p-4">
+                        <p className="text-xs text-muted-foreground">Number of Staff</p>
+                        <p className="text-2xl font-bold mt-1">{orgStats.staff}</p>
+                        <a href="/staff" className="text-xs text-primary hover:underline mt-1 inline-block">
+                          View Staff →
+                        </a>
+                      </CardContent>
+                    </Card>
+                    <Card className="border border-border">
+                      <CardContent className="p-4">
+                        <p className="text-xs text-muted-foreground">Number of Payers</p>
+                        <p className="text-2xl font-bold mt-1">{orgStats.payers}</p>
+                        <a href="/payers" className="text-xs text-primary hover:underline mt-1 inline-block">
+                          View Payers →
+                        </a>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
@@ -532,32 +592,140 @@ export default function SettingsPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                    <CreditCard className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">
-                    {org?.tier === "pro" ? "Pro Plan Active" : "Free Trial Active"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-6">
-                    {org?.tier === "pro"
-                      ? "You're on the Pro plan with full access to all features."
-                      : "You're currently on a free trial. Upgrade to unlock all features."}
-                  </p>
-                  <div className="flex justify-center gap-3">
-                    <Button variant="outline">View Billing History</Button>
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Current Plan</h3>
+                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-lg font-semibold">{org?.tier === "pro" ? "Pro Plan" : "Free Trial"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {org?.tier === "pro"
+                          ? "Full access to all features"
+                          : "Limited features - upgrade to unlock everything"}
+                      </p>
+                    </div>
                     {org?.tier !== "pro" && <Button>Upgrade to Pro</Button>}
                   </div>
                 </div>
+
                 <Separator />
+
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Payment Information</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-7 bg-gradient-to-br from-blue-600 to-blue-400 rounded flex items-center justify-center">
+                          <CreditCard className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">•••• •••• •••• 4242</p>
+                          <p className="text-xs text-muted-foreground">Expires 12/2026</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Update Payment Method
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium">Next Billing Date</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">${org?.tier === "pro" ? "199.00" : "0.00"}</p>
+                        <p className="text-xs text-muted-foreground">per month</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-sm font-semibold mb-3">Billing History</h3>
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left text-xs font-medium text-muted-foreground p-3">Date</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground p-3">Description</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground p-3">Amount</th>
+                          <th className="text-left text-xs font-medium text-muted-foreground p-3">Status</th>
+                          <th className="text-right text-xs font-medium text-muted-foreground p-3">Invoice</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-t border-border">
+                          <td className="p-3 text-sm">Nov 1, 2025</td>
+                          <td className="p-3 text-sm">{org?.tier === "pro" ? "Pro Plan" : "Free Trial"} - Monthly</td>
+                          <td className="p-3 text-sm font-medium">${org?.tier === "pro" ? "199.00" : "0.00"}</td>
+                          <td className="p-3">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              Paid
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <Button variant="ghost" size="sm" className="h-8">
+                              <Download className="w-4 h-4 mr-1" />
+                              PDF
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-t border-border">
+                          <td className="p-3 text-sm">Oct 1, 2025</td>
+                          <td className="p-3 text-sm">{org?.tier === "pro" ? "Pro Plan" : "Free Trial"} - Monthly</td>
+                          <td className="p-3 text-sm font-medium">${org?.tier === "pro" ? "199.00" : "0.00"}</td>
+                          <td className="p-3">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              Paid
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <Button variant="ghost" size="sm" className="h-8">
+                              <Download className="w-4 h-4 mr-1" />
+                              PDF
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-t border-border">
+                          <td className="p-3 text-sm">Sep 1, 2025</td>
+                          <td className="p-3 text-sm">{org?.tier === "pro" ? "Pro Plan" : "Free Trial"} - Monthly</td>
+                          <td className="p-3 text-sm font-medium">${org?.tier === "pro" ? "199.00" : "0.00"}</td>
+                          <td className="p-3">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              Paid
+                            </span>
+                          </td>
+                          <td className="p-3 text-right">
+                            <Button variant="ghost" size="sm" className="h-8">
+                              <Download className="w-4 h-4 mr-1" />
+                              PDF
+                            </Button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <Separator />
+
                 <div className="space-y-3">
                   <h4 className="text-sm font-semibold">Quick Links</h4>
                   <div className="grid gap-2">
                     <a href="/revenue-risk" className="text-sm text-primary hover:underline flex items-center gap-2">
-                      → View Billing Compliance Dashboard
+                      <ExternalLink className="w-4 h-4" />
+                      View Billing Compliance Dashboard
                     </a>
                     <a href="/integrations" className="text-sm text-primary hover:underline flex items-center gap-2">
-                      → Manage Payment Integrations
+                      <ExternalLink className="w-4 h-4" />
+                      Manage Payment Integrations
                     </a>
                   </div>
                 </div>
@@ -576,8 +744,8 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                    <Key className="w-8 h-8 text-muted-foreground" />
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                    <Key className="w-8 h-8 text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">API Access Coming Soon</h3>
                   <p className="text-sm text-muted-foreground mb-6">
