@@ -183,3 +183,32 @@ export const SANDBOX_AUDIT_COMPLETE_ITEMS = [
   "Infection control protocols documented and followed.",
   "Professional licenses verified and copies on file.",
 ]
+
+export const SANDBOX_DOCUMENTS = [
+  {
+    id: "doc-kiley-slp",
+    file_name: "slp-license-kiley-russell.pdf",
+    document_type: "Speech Pathologist License",
+    owner_name: "Kiley Russell",
+    owner_id: "staff-kiley",
+    owner_type: "staff",
+    issue_date: "2024-01-01",
+    expiration_date: "2026-02-28",
+    license_number: "SLP-047.234567",
+    jurisdiction: "Illinois",
+    created_at: "2024-01-20",
+  },
+  {
+    id: "doc-amanda-ot",
+    file_name: "ot-license-amanda-chen.pdf",
+    document_type: "OT Certification",
+    owner_name: "Amanda Chen",
+    owner_id: "staff-amanda",
+    owner_type: "staff",
+    issue_date: "2023-07-01",
+    expiration_date: "2026-06-30",
+    license_number: "OT-112.345678",
+    jurisdiction: "Illinois",
+    created_at: "2023-07-15",
+  },
+]
