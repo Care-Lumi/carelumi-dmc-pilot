@@ -52,8 +52,8 @@ export default function AuditReadinessPage() {
         try {
           const response = await fetch("/api/documents")
           if (response.ok) {
-            const docs = await response.json()
-            setRealDocuments(docs)
+            const data = await response.json()
+            setRealDocuments(data.documents || [])
           }
         } catch (error) {
           console.error("[v0] Failed to fetch real documents:", error)

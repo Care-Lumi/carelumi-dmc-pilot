@@ -291,7 +291,7 @@ function DashboardContent({
             <RevenueAtRiskCard locked />
             <CredentialingPipelineCard totalPayers={metrics.payerCount} loading={metrics.loading} />
             <ExpiringSoonCard total={metrics.expiringCount} loading={metrics.loading} />
-            <AuditReadinessCard locked />
+            <AuditReadinessCard locked={!org?.useRealData?.auditReadiness} />
           </div>
 
           {actionItems.length > 0 && (

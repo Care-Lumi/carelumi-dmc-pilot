@@ -28,7 +28,8 @@ export function AuditReadinessCard({ className, locked = false }: AuditReadiness
         try {
           const response = await fetch("/api/documents")
           if (response.ok) {
-            const documents = await response.json()
+            const data = await response.json()
+            const documents = data.documents || []
             const sandboxData = getSandboxDataForOrg(org.type)
 
             // Extract entities
