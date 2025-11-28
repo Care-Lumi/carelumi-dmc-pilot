@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
@@ -14,8 +14,7 @@ import { type AuditType, calculateAuditScore } from "@/lib/audit-requirements"
 
 export default function AuditReadinessPage() {
   const { org } = useOrg()
-  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
-
+  const [sandboxData, setSandboxData] = useState<any>(null)
   const [selectedAuditType, setSelectedAuditType] = useState<AuditType>("general")
   const [showComplete, setShowComplete] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -26,20 +25,62 @@ export default function AuditReadinessPage() {
     return false
   })
 
+  useEffect(() => {
+    if (org?.type) {
+      const data = getSandboxDataForOrg(org.type)
+      setSandboxData(data)
+    }
+  }, [org])
+
+  useEffect(() => {
+    const handleCollapsedChange = (e: CustomEvent) => {
+      setCollapsed(e.detail)
+    }
+    window.addEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    return () => {
+      window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
+    }
+  }, [])
+
+  if (!sandboxData) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <TopNav />
+        <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
+          <div className="mx-auto max-w-[1400px] flex items-center justify-center h-96">
+            <p className="text-muted-foreground">Loading audit data...</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  const uniqueStaff = sandboxData.SANDBOX_DOCUMENTS
+    ? sandboxData.SANDBOX_DOCUMENTS.filter((doc: any) => doc.owner_type === "staff").reduce((acc: any[], doc: any) => {
+        if (!acc.find((s) => s.id === doc.owner_id)) {
+          acc.push({
+            id: doc.owner_id,
+            name: doc.owner_name,
+            jurisdiction: doc.jurisdiction,
+          })
+        }
+        return acc
+      }, [])
+    : []
+
   // Prepare entities for audit calculation
   const entities = {
-    staff: sandboxData.SANDBOX_DOCUMENTS.filter((doc: any) => doc.owner_type === "staff")
-      .map((doc: any) => ({ id: doc.owner_id, name: doc.owner_name }))
-      .filter((entity: any, index: number, self: any[]) => self.findIndex((e) => e.id === entity.id) === index),
+    staff: uniqueStaff,
     facilities: sandboxData.SANDBOX_FACILITIES || [],
     payers: sandboxData.SANDBOX_PAYERS || [],
   }
 
   // Calculate scores for all audit types
-  const generalAudit = calculateAuditScore("general", sandboxData.SANDBOX_DOCUMENTS, entities)
-  const stateAudit = calculateAuditScore("state", sandboxData.SANDBOX_DOCUMENTS, entities)
-  const facilityAudit = calculateAuditScore("facility", sandboxData.SANDBOX_DOCUMENTS, entities)
-  const payerAudit = calculateAuditScore("payer", sandboxData.SANDBOX_DOCUMENTS, entities)
+  const generalAudit = calculateAuditScore("general", sandboxData.SANDBOX_DOCUMENTS || [], entities)
+  const stateAudit = calculateAuditScore("state", sandboxData.SANDBOX_DOCUMENTS || [], entities)
+  const facilityAudit = calculateAuditScore("facility", sandboxData.SANDBOX_DOCUMENTS || [], entities)
+  const payerAudit = calculateAuditScore("payer", sandboxData.SANDBOX_DOCUMENTS || [], entities)
 
   const auditScores = {
     general: generalAudit,
