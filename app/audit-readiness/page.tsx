@@ -8,16 +8,19 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
 import { useOrg } from "@/lib/contexts/org-context"
-import { ChevronDown, ChevronUp, Upload, FileArchive, AlertCircle, Clock, Mic } from "lucide-react"
+import { ChevronDown, ChevronUp, Upload, FileArchive, AlertCircle, Clock, Mic, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type AuditType, calculateAuditScore } from "@/lib/audit-requirements"
+import { GenerateAuditModal } from "@/components/dashboard/generate-audit-modal"
 
 export default function AuditReadinessPage() {
   const { org } = useOrg()
   const [sandboxData, setSandboxData] = useState<any>(null)
+  const [realDocuments, setRealDocuments] = useState<any[]>([])
   const [selectedAuditType, setSelectedAuditType] = useState<AuditType>("general")
   const [showComplete, setShowComplete] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showGenerateModal, setShowGenerateModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
@@ -26,11 +29,38 @@ export default function AuditReadinessPage() {
     return false
   })
 
+  const [dismissedItems, setDismissedItems] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined" && org?.id) {
+      const stored = localStorage.getItem(`audit-dismissed-${org.id}`)
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    }
+    return new Set()
+  })
+
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set(["historical"]))
+
   useEffect(() => {
     if (org?.type) {
       const data = getSandboxDataForOrg(org.type)
       setSandboxData(data)
     }
+  }, [org])
+
+  useEffect(() => {
+    const fetchRealDocuments = async () => {
+      if (org?.useRealData?.auditReadiness) {
+        try {
+          const response = await fetch("/api/documents")
+          if (response.ok) {
+            const docs = await response.json()
+            setRealDocuments(docs)
+          }
+        } catch (error) {
+          console.error("[v0] Failed to fetch real documents:", error)
+        }
+      }
+    }
+    fetchRealDocuments()
   }, [org])
 
   useEffect(() => {
@@ -42,6 +72,28 @@ export default function AuditReadinessPage() {
       window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && org?.id) {
+      localStorage.setItem(`audit-dismissed-${org.id}`, JSON.stringify(Array.from(dismissedItems)))
+    }
+  }, [dismissedItems, org?.id])
+
+  const dismissItem = (itemKey: string) => {
+    setDismissedItems((prev) => new Set([...prev, itemKey]))
+  }
+
+  const toggleSection = (section: string) => {
+    setCollapsedSections((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(section)) {
+        newSet.delete(section)
+      } else {
+        newSet.add(section)
+      }
+      return newSet
+    })
+  }
 
   if (!sandboxData || !org) {
     return (
@@ -57,20 +109,22 @@ export default function AuditReadinessPage() {
     )
   }
 
-  const uniqueStaff = sandboxData.SANDBOX_DOCUMENTS
-    ? sandboxData.SANDBOX_DOCUMENTS.filter((doc: any) => doc.owner_type === "staff").reduce((acc: any[], doc: any) => {
-        // Use owner_name as unique identifier since staff don't have separate IDs
-        const staffKey = `${doc.owner_name}_${doc.jurisdiction || "default"}`
-        if (!acc.find((s) => s.id === staffKey)) {
-          acc.push({
-            id: staffKey, // Use composite key as ID
-            name: doc.owner_name,
-            jurisdiction: doc.jurisdiction,
-          })
-        }
-        return acc
-      }, [])
-    : []
+  const useRealData = org.useRealData?.auditReadiness
+  const documentsToUse = useRealData ? realDocuments : sandboxData.SANDBOX_DOCUMENTS || []
+
+  const uniqueStaff = documentsToUse
+    .filter((doc: any) => doc.owner_type === "staff")
+    .reduce((acc: any[], doc: any) => {
+      const staffKey = `${doc.owner_name}_${doc.jurisdiction || "default"}`
+      if (!acc.find((s) => s.id === staffKey)) {
+        acc.push({
+          id: staffKey,
+          name: doc.owner_name,
+          jurisdiction: doc.jurisdiction,
+        })
+      }
+      return acc
+    }, [])
 
   const facilities = (sandboxData.SANDBOX_FACILITIES || []).map((f: any, idx: number) => ({
     ...f,
@@ -82,23 +136,21 @@ export default function AuditReadinessPage() {
     id: p.id || p.name || `payer_${idx}`,
   }))
 
-  // Prepare entities for audit calculation
   const entities = {
     staff: uniqueStaff,
     facilities: facilities,
     payers: payers,
   }
 
-  const documentsWithStaffKeys = (sandboxData.SANDBOX_DOCUMENTS || []).map((doc: any) => ({
+  const documentsWithStaffKeys = documentsToUse.map((doc: any) => ({
     ...doc,
     owner_id: doc.owner_type === "staff" ? `${doc.owner_name}_${doc.jurisdiction || "default"}` : doc.owner_id,
   }))
 
-  // Calculate scores for all audit types
-  const generalAudit = calculateAuditScore("general", documentsWithStaffKeys, entities)
-  const stateAudit = calculateAuditScore("state", documentsWithStaffKeys, entities)
-  const facilityAudit = calculateAuditScore("facility", documentsWithStaffKeys, entities)
-  const payerAudit = calculateAuditScore("payer", documentsWithStaffKeys, entities)
+  const generalAudit = calculateAuditScore("general", documentsWithStaffKeys, entities, org.type)
+  const stateAudit = calculateAuditScore("state", documentsWithStaffKeys, entities, org.type)
+  const facilityAudit = calculateAuditScore("facility", documentsWithStaffKeys, entities, org.type)
+  const payerAudit = calculateAuditScore("payer", documentsWithStaffKeys, entities, org.type)
 
   const auditScores = {
     general: generalAudit,
@@ -131,19 +183,69 @@ export default function AuditReadinessPage() {
     { type: "payer" as AuditType, label: "Payer-Specific", score: payerAudit.score },
   ]
 
-  const handleGenerateAuditPackage = () => {
-    // TODO: Implement ZIP generation with summary PDF + organized docs
-    alert("Generate Audit Package feature coming soon")
+  const getFilteredItems = (items: any[], priority: string) => {
+    return items
+      .filter((item) => item.priority === priority)
+      .filter((item) => {
+        const itemKey = `${item.entity_name}_${item.doc_type}_${item.year}`
+        return !dismissedItems.has(itemKey)
+      })
+      .filter(
+        (item) =>
+          searchQuery === "" ||
+          item.entity_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.doc_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.jurisdiction?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.year.toString().includes(searchQuery),
+      )
   }
 
-  const filteredMissingItems = selectedAudit.missingItems.filter(
-    (item: any) =>
-      searchQuery === "" ||
-      item.entity_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.doc_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.jurisdiction?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.year.toString().includes(searchQuery),
-  )
+  const criticalItems = getFilteredItems(selectedAudit.missingItems, "critical")
+  const recommendedItems = getFilteredItems(selectedAudit.missingItems, "recommended")
+  const historicalItems = getFilteredItems(selectedAudit.missingItems, "historical")
+
+  const renderMissingItem = (item: any, idx: number, canDismiss: boolean, color: "red" | "yellow" | "gray") => {
+    const itemKey = `${item.entity_name}_${item.doc_type}_${item.year}`
+    const colors = {
+      red: { bg: "bg-red-50", border: "border-red-200", text: "text-red-600" },
+      yellow: { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-600" },
+      gray: { bg: "bg-gray-50", border: "border-gray-200", text: "text-gray-600" },
+    }
+
+    return (
+      <div
+        key={idx}
+        className={cn(
+          "flex items-center justify-between rounded-lg border p-4",
+          colors[color].bg,
+          colors[color].border,
+        )}
+      >
+        <div className="flex items-start gap-3 flex-1">
+          <AlertCircle className={cn("mt-1 h-5 w-5 flex-shrink-0", colors[color].text)} />
+          <div>
+            <p className="font-medium text-foreground">
+              Upload {item.year} {item.jurisdiction} {item.doc_type} for {item.entity_name}
+            </p>
+            <p className="text-sm text-muted-foreground capitalize">{item.entity_type} / Compliance</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {canDismiss && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => dismissItem(itemKey)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+          <Button size="sm">Resolve</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -162,13 +264,16 @@ export default function AuditReadinessPage() {
               </Link>
               <h1 className="text-3xl font-semibold text-foreground">Audit Readiness</h1>
               <p className="text-sm text-muted-foreground mt-1">Monitor compliance gaps across all audit types</p>
+              {!useRealData && (
+                <p className="text-xs text-amber-600 mt-1">Demo mode - Upgrade to Pro for real document tracking</p>
+              )}
             </div>
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => setShowUploadModal(true)}>
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Auditor Requirements
               </Button>
-              <Button onClick={handleGenerateAuditPackage}>
+              <Button onClick={() => setShowGenerateModal(true)}>
                 <FileArchive className="mr-2 h-4 w-4" />
                 Generate Audit Package
               </Button>
@@ -237,7 +342,7 @@ export default function AuditReadinessPage() {
             </div>
           )}
 
-          {selectedAudit.missingItems.length > 0 && (
+          {(criticalItems.length > 0 || recommendedItems.length > 0 || historicalItems.length > 0) && (
             <>
               <div className="mb-6">
                 <div className="relative">
@@ -254,46 +359,63 @@ export default function AuditReadinessPage() {
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h2 className="mb-4 text-lg font-semibold text-foreground">
-                  Missing Items ({filteredMissingItems.length})
-                </h2>
-                <div className="space-y-3">
-                  {filteredMissingItems.map((item: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <svg
-                          className="mt-1 h-5 w-5 flex-shrink-0 text-red-600"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
-                        <div>
-                          <p className="font-medium text-foreground">
-                            Upload {item.year} {item.jurisdiction} {item.doc_type} for {item.entity_name}
-                          </p>
-                          <p className="text-sm text-muted-foreground capitalize">{item.entity_type} / Compliance</p>
-                        </div>
-                      </div>
-                      <Button size="sm">Resolve</Button>
-                    </div>
-                  ))}
+              {criticalItems.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="mb-4 text-lg font-semibold text-foreground flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                      Critical
+                    </span>
+                    Current Year ({criticalItems.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {criticalItems.map((item, idx) => renderMissingItem(item, idx, false, "red"))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {recommendedItems.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="mb-4 text-lg font-semibold text-foreground flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
+                      Recommended
+                    </span>
+                    Prior Year ({recommendedItems.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {recommendedItems.map((item, idx) => renderMissingItem(item, idx, true, "yellow"))}
+                  </div>
+                </div>
+              )}
+
+              {historicalItems.length > 0 && (
+                <div className="mb-6">
+                  <button
+                    onClick={() => toggleSection("historical")}
+                    className="mb-4 flex w-full items-center justify-between text-left"
+                  >
+                    <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                        Historical
+                      </span>
+                      2+ Years Ago ({historicalItems.length})
+                    </h2>
+                    {collapsedSections.has("historical") ? (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </button>
+
+                  {!collapsedSections.has("historical") && (
+                    <div className="space-y-3">
+                      {historicalItems.map((item, idx) => renderMissingItem(item, idx, true, "gray"))}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 
-          {/* Complete Items Section */}
           <div className="mb-6">
             <button
               onClick={() => setShowComplete(!showComplete)}
@@ -328,6 +450,15 @@ export default function AuditReadinessPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Audit Type</label>
+                  <select className="w-full h-10 rounded-md border border-border bg-card px-3 text-sm">
+                    <option>General Audit</option>
+                    <option>State Regulatory</option>
+                    <option>Facility Audit</option>
+                    <option>Payer-Specific</option>
+                  </select>
+                </div>
                 <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                   <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground">Drag and drop file or click to browse</p>
@@ -343,6 +474,10 @@ export default function AuditReadinessPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {showGenerateModal && (
+        <GenerateAuditModal isOpen={showGenerateModal} onClose={() => setShowGenerateModal(false)} />
       )}
     </div>
   )
