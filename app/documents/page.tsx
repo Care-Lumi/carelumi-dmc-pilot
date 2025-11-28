@@ -57,7 +57,7 @@ function DocumentsContent() {
     const groups: Record<string, Document[]> = {}
 
     docs.forEach((doc) => {
-      const key = `${doc.owner_id}|${doc.document_type}|${doc.jurisdiction || "none"}`
+      const key = `${doc.owner_name.toLowerCase().trim()}|${doc.document_type}|${doc.jurisdiction || "none"}`
       if (!groups[key]) {
         groups[key] = []
       }
@@ -65,7 +65,7 @@ function DocumentsContent() {
     })
 
     const markedDocs = docs.map((doc) => {
-      const key = `${doc.owner_id}|${doc.document_type}|${doc.jurisdiction || "none"}`
+      const key = `${doc.owner_name.toLowerCase().trim()}|${doc.document_type}|${doc.jurisdiction || "none"}`
       const group = groups[key]
 
       const sorted = [...group].sort((a, b) => {
