@@ -23,6 +23,10 @@ import { AuditLogModal } from "@/components/dashboard/modals/audit-log-modal"
 import { AttestationModal } from "@/components/dashboard/modals/attestation-modal"
 import { ClipVoiceIntro } from "@/components/dashboard/clip-voice-intro"
 import { cn } from "@/lib/utils"
+import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
+import { useOrg } from "@/lib/contexts/org-context"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
 export default function DashboardPage() {
   const [criticalAlerts, setCriticalAlerts] = useState<any[]>([])
@@ -214,12 +218,51 @@ function DashboardContent({
   handleClipIntroSkip,
   handleTourComplete,
 }: any) {
+  const { org } = useOrg()
+  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
+
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebar-collapsed") === "true"
     }
     return false
   })
+
+  const [actionItems, setActionItems] = useState<any[]>([])
+
+  useEffect(() => {
+    const now = new Date()
+    const sixtyDaysFromNow = new Date()
+    sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60)
+
+    const items = sandboxData.SANDBOX_DOCUMENTS.filter((doc: any) => {
+      if (!doc.expiration_date) return false
+      const expDate = new Date(doc.expiration_date)
+      // Show if expired OR expiring within 60 days
+      return expDate <= sixtyDaysFromNow
+    })
+      .map((doc: any) => {
+        const expDate = new Date(doc.expiration_date)
+        const daysUntil = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        return {
+          id: doc.id,
+          owner_name: doc.owner_name,
+          doc_type: doc.document_type,
+          expiration_date: doc.expiration_date,
+          days_until_expiry: daysUntil,
+          is_expired: daysUntil < 0,
+          severity: daysUntil < 0 ? "expired" : "expiring",
+        }
+      })
+      .sort((a: any, b: any) => {
+        // Sort: expired first, then by urgency (days until expiry)
+        if (a.is_expired && !b.is_expired) return -1
+        if (!a.is_expired && b.is_expired) return 1
+        return a.days_until_expiry - b.days_until_expiry
+      })
+
+    setActionItems(items)
+  }, [sandboxData])
 
   useEffect(() => {
     const handleCollapsedChange = (e: CustomEvent) => {
@@ -230,6 +273,9 @@ function DashboardContent({
       window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
     }
   }, [])
+
+  const topActionItems = actionItems.slice(0, 3)
+  const remainingCount = actionItems.length - 3
 
   return (
     <>
@@ -259,6 +305,64 @@ function DashboardContent({
             <ExpiringSoonCard total={metrics.expiringCount} loading={metrics.loading} />
             <AuditReadinessCard locked />
           </div>
+
+          {actionItems.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold text-foreground">Action Items</h2>
+              {topActionItems.map((item) => (
+                <Card
+                  key={item.id}
+                  className={cn(
+                    "border-2",
+                    item.is_expired ? "border-red-200 bg-red-50" : "border-yellow-200 bg-yellow-50",
+                  )}
+                >
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "px-2 py-1 rounded text-xs font-medium",
+                            item.is_expired ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700",
+                          )}
+                        >
+                          {item.is_expired ? "EXPIRED" : "EXPIRING"}
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {item.doc_type} - {item.owner_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.is_expired
+                              ? `Expired ${Math.abs(item.days_until_expiry)} days ago`
+                              : `Expires in ${item.days_until_expiry} days`}
+                          </p>
+                        </div>
+                      </div>
+                      <Button size="sm">Resolve</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {remainingCount > 0 && (
+                <Card className="border-yellow-200 bg-yellow-50">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">
+                          Additional licenses expiring soon - {remainingCount} more
+                        </p>
+                        <p className="text-sm text-muted-foreground">View all in Documents & Reports</p>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => (window.location.href = "/documents")}>
+                        View All
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
 
           <div data-tour="critical-alerts">
             <CriticalAlerts alerts={criticalAlerts} />

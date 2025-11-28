@@ -5,42 +5,20 @@ import Link from "next/link"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
 import { useOrg } from "@/lib/contexts/org-context"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, Upload, FileArchive, AlertCircle, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { type AuditType, calculateAuditScore } from "@/lib/audit-requirements"
 
-type AuditType = "general" | "state" | "fire" | "payer"
-
-// Added helper function to check if any document covers a specific year
-function documentCoversYear(doc: any, year: number): boolean {
-  if (!doc.expiration_date) return false
-
-  const issueDate = doc.issue_date ? new Date(doc.issue_date) : new Date(doc.created_at)
-  const expirationDate = new Date(doc.expiration_date)
-
-  const yearStart = new Date(year, 0, 1) // Jan 1 of year
-  const yearEnd = new Date(year, 11, 31) // Dec 31 of year
-
-  // Doc covers year if: issue_date <= Dec 31 of year AND expiration_date >= Jan 1 of year
-  return issueDate <= yearEnd && expirationDate >= yearStart
-}
-
-// Function to check year coverage across ALL documents (primary + historical)
-function checkYearCoverage(documents: any[], ownerId: string, docType: string, year: number): boolean {
-  return documents.some(
-    (doc) => doc.owner_id === ownerId && doc.document_type === docType && documentCoversYear(doc, year),
-  )
-}
-
-function AuditReadinessContent() {
+export default function AuditReadinessPage() {
   const { org } = useOrg()
   const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
-  // Get all documents from sandbox data for year coverage checking
-  const allDocuments = sandboxData.SANDBOX_DOCUMENTS || []
 
   const [selectedAuditType, setSelectedAuditType] = useState<AuditType>("general")
   const [showComplete, setShowComplete] = useState(false)
+  const [showUploadModal, setShowUploadModal] = useState(false)
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebar-collapsed") === "true"
@@ -48,52 +26,56 @@ function AuditReadinessContent() {
     return false
   })
 
-  const auditScores = {
-    general: 77,
-    state: 64,
-    fire: 82,
-    payer: 70,
+  // Prepare entities for audit calculation
+  const entities = {
+    staff: sandboxData.SANDBOX_DOCUMENTS.filter((doc: any) => doc.owner_type === "staff")
+      .map((doc: any) => ({ id: doc.owner_id, name: doc.owner_name }))
+      .filter((entity: any, index: number, self: any[]) => self.findIndex((e) => e.id === entity.id) === index),
+    facilities: sandboxData.SANDBOX_FACILITIES || [],
+    payers: sandboxData.SANDBOX_PAYERS || [],
   }
 
-  const completeItemsFromSandbox = sandboxData.SANDBOX_AUDIT_COMPLETE_ITEMS.map((item, index) => ({
-    id: `c${index + 1}`,
-    category: "Compliance",
-    item: item,
-    status: "complete" as const,
-    auditTypes: ["general" as const],
-  }))
+  // Calculate scores for all audit types
+  const generalAudit = calculateAuditScore("general", sandboxData.SANDBOX_DOCUMENTS, entities)
+  const stateAudit = calculateAuditScore("state", sandboxData.SANDBOX_DOCUMENTS, entities)
+  const facilityAudit = calculateAuditScore("facility", sandboxData.SANDBOX_DOCUMENTS, entities)
+  const payerAudit = calculateAuditScore("payer", sandboxData.SANDBOX_DOCUMENTS, entities)
 
-  // Filter missing items to only show those where NO document (primary or historical) covers the required year
-  const currentYear = new Date().getFullYear()
-  const requiredYears = [currentYear, currentYear - 1, currentYear - 2]
+  const auditScores = {
+    general: generalAudit,
+    state: stateAudit,
+    facility: facilityAudit,
+    payer: payerAudit,
+  }
 
-  const actualMissingItems = sandboxData.SANDBOX_AUDIT_MISSING.filter((item) => {
-    // Parse the item description to extract owner, doc type, and year if mentioned
-    // This is a simplified check - in production, you'd have structured data
-    const hasYearGap = requiredYears.some((year) => {
-      // Check if this missing item relates to a year gap
-      return item.item.includes(String(year))
-    })
+  const selectedAudit = auditScores[selectedAuditType]
 
-    if (!hasYearGap) return true // Keep non-year-related missing items
-
-    // For year-related items, only show if truly no document covers that year
-    // This would need proper data structure in production
-    return true // Placeholder - real logic would check checkYearCoverage
-  })
-
-  const allItems = [...actualMissingItems, ...completeItemsFromSandbox]
-
-  const filteredItems = allItems.filter((item) => item.auditTypes.includes(selectedAuditType))
-  const missingItems = filteredItems.filter((item) => item.status === "incomplete")
-  const completeItems = filteredItems.filter((item) => item.status === "complete")
+  const atRiskGroups = selectedAudit.atRiskItems.reduce((acc: any, item: any) => {
+    const key = `${item.doc_type}_${item.entity_type}`
+    if (!acc[key]) {
+      acc[key] = {
+        doc_type: item.doc_type,
+        entity_type: item.entity_type,
+        count: 0,
+        items: [],
+      }
+    }
+    acc[key].count++
+    acc[key].items.push(item)
+    return acc
+  }, {})
 
   const auditTypeCards = [
-    { type: "general" as AuditType, label: "General Audit", score: auditScores.general, color: "text-green-600" },
-    { type: "state" as AuditType, label: "State Regulatory", score: auditScores.state, color: "text-yellow-600" },
-    { type: "fire" as AuditType, label: "Facility Audit", score: auditScores.fire, color: "text-green-600" },
-    { type: "payer" as AuditType, label: "Payer-Specific", score: auditScores.payer, color: "text-yellow-600" },
+    { type: "general" as AuditType, label: "General Audit", score: generalAudit.score },
+    { type: "state" as AuditType, label: "State Regulatory", score: stateAudit.score },
+    { type: "facility" as AuditType, label: "Facility Audit", score: facilityAudit.score },
+    { type: "payer" as AuditType, label: "Payer-Specific", score: payerAudit.score },
   ]
+
+  const handleGenerateAuditPackage = () => {
+    // TODO: Implement ZIP generation with summary PDF + organized docs
+    alert("Generate Audit Package feature coming soon")
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,15 +84,27 @@ function AuditReadinessContent() {
 
       <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="mx-auto max-w-[1400px]">
-          <div className="mb-8">
-            <Link
-              href="/dashboard"
-              className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-3xl font-semibold text-foreground">Audit Readiness</h1>
-            <p className="text-sm text-muted-foreground mt-1">Monitor compliance gaps across all audit types</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <Link
+                href="/dashboard"
+                className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ← Back to Dashboard
+              </Link>
+              <h1 className="text-3xl font-semibold text-foreground">Audit Readiness</h1>
+              <p className="text-sm text-muted-foreground mt-1">Monitor compliance gaps across all audit types</p>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setShowUploadModal(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Auditor Requirements
+              </Button>
+              <Button onClick={handleGenerateAuditPackage}>
+                <FileArchive className="mr-2 h-4 w-4" />
+                Generate Audit Package
+              </Button>
+            </div>
           </div>
 
           <div className="mb-8 grid grid-cols-4 gap-6">
@@ -127,21 +121,63 @@ function AuditReadinessContent() {
                   <h3 className="text-sm font-medium text-muted-foreground">{audit.label}</h3>
                 </CardHeader>
                 <CardContent>
-                  <div className={cn("text-3xl font-bold", audit.color)}>{audit.score}%</div>
+                  <div
+                    className={cn(
+                      "text-3xl font-bold",
+                      audit.score >= 80 ? "text-green-600" : audit.score >= 60 ? "text-yellow-600" : "text-red-600",
+                    )}
+                  >
+                    {audit.score}%
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">Ready</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {/* Missing Items Section */}
-          {missingItems.length > 0 && (
+          {Object.keys(atRiskGroups).length > 0 && (
             <div className="mb-6">
-              <h2 className="mb-4 text-lg font-semibold text-foreground">Missing Items ({missingItems.length})</h2>
+              <h2 className="mb-4 text-lg font-semibold text-foreground flex items-center gap-2">
+                <Clock className="h-5 w-5 text-orange-600" />
+                At Risk Soon ({selectedAudit.atRiskItems.length})
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Object.values(atRiskGroups).map((group: any, idx) => (
+                  <Card key={idx} className="border-orange-200 bg-orange-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-1" />
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground">{group.doc_type}s expiring soon</h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {group.count} {group.entity_type} {group.count === 1 ? "license" : "licenses"} expire within
+                            60 days
+                          </p>
+                          <div className="mt-2 space-y-1">
+                            {group.items.slice(0, 3).map((item: any, i: number) => (
+                              <p key={i} className="text-xs text-muted-foreground">
+                                • {item.entity_name} - {item.days_until_expiry} days
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedAudit.missingItems.length > 0 && (
+            <div className="mb-6">
+              <h2 className="mb-4 text-lg font-semibold text-foreground">
+                Missing Items ({selectedAudit.missingItems.length})
+              </h2>
               <div className="space-y-3">
-                {missingItems.map((item) => (
+                {selectedAudit.missingItems.map((item: any, idx: number) => (
                   <div
-                    key={item.id}
+                    key={idx}
                     className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4"
                   >
                     <div className="flex items-start gap-3">
@@ -159,14 +195,13 @@ function AuditReadinessContent() {
                         />
                       </svg>
                       <div>
-                        <p className="font-medium text-foreground">{item.item}</p>
-                        <p className="text-sm text-muted-foreground">{item.category}</p>
-                        {item.action && <p className="mt-1 text-sm text-red-700">{item.action}</p>}
+                        <p className="font-medium text-foreground">
+                          Upload {item.year} {item.jurisdiction} {item.doc_type} for {item.entity_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground capitalize">{item.entity_type} / Compliance</p>
                       </div>
                     </div>
-                    <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                      Resolve
-                    </button>
+                    <Button size="sm">Resolve</Button>
                   </div>
                 ))}
               </div>
@@ -179,7 +214,7 @@ function AuditReadinessContent() {
               onClick={() => setShowComplete(!showComplete)}
               className="mb-4 flex w-full items-center justify-between text-left"
             >
-              <h2 className="text-lg font-semibold text-foreground">Complete Items ({completeItems.length})</h2>
+              <h2 className="text-lg font-semibold text-foreground">Complete Items ({selectedAudit.totalCompleted})</h2>
               {showComplete ? (
                 <ChevronUp className="h-5 w-5 text-muted-foreground" />
               ) : (
@@ -188,37 +223,42 @@ function AuditReadinessContent() {
             </button>
 
             {showComplete && (
-              <div className="space-y-2">
-                {completeItems.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">
-                    <svg
-                      className="h-5 w-5 flex-shrink-0 text-green-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{item.item}</p>
-                      <p className="text-sm text-muted-foreground">{item.category}</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="rounded-lg border border-border bg-card p-4">
+                <p className="text-sm text-muted-foreground">
+                  {selectedAudit.totalCompleted} of {selectedAudit.totalRequired} required documents are properly
+                  covered for the audit period.
+                </p>
               </div>
             )}
           </div>
         </div>
       </main>
+
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <h2 className="text-xl font-semibold">Upload Auditor Requirements</h2>
+              <p className="text-sm text-muted-foreground">Upload official audit checklist from auditor</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+                  <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Drag and drop file or click to browse</p>
+                  <p className="text-xs text-muted-foreground mt-1">Supports PDF, Excel, CSV</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setShowUploadModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="flex-1">Upload</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
-}
-
-export default function AuditReadinessPage() {
-  return <AuditReadinessContent />
 }
