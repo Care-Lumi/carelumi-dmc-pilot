@@ -236,7 +236,7 @@ function DocumentsContent() {
           {!showEmptyState && (
             <>
               {/* Metric Cards */}
-              <div className="mb-6 grid grid-cols-2 gap-6">
+              <div className="mb-6 grid grid-cols-3 gap-6">
                 <Card
                   className={`cursor-pointer transition-all ${
                     statusFilter === "expired" ? "ring-2 ring-red-600 shadow-lg" : "hover:shadow-md"
@@ -264,6 +264,17 @@ function DocumentsContent() {
                   <CardContent>
                     <div className="text-2xl font-bold text-left text-yellow-600">{expiringDocs}</div>
                     <p className="text-xs text-muted-foreground">within next 60 days</p>
+                  </CardContent>
+                </Card>
+
+                {/* Audit History card */}
+                <Card className="hover:shadow-md transition-all">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <h3 className="text-sm font-medium">Audit History</h3>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-left text-primary">{documents.length}</div>
+                    <p className="text-xs text-muted-foreground">documents uploaded</p>
                   </CardContent>
                 </Card>
               </div>

@@ -42,6 +42,7 @@ const navigationItems = [
   { name: "Facilities", href: "/facilities", icon: Building2 },
   { name: "Regulatory Updates", href: "/regulatory", icon: FileText },
   { name: "Billing Compliance", href: "/revenue-risk", icon: DollarSign },
+  { name: "Audit Readiness", href: "/audit-readiness", icon: ShieldCheck },
 ]
 
 export function Sidebar() {

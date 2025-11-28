@@ -2,26 +2,35 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
-import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
 import { useOrg } from "@/lib/contexts/org-context"
+import { ChevronDown, ChevronUp } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-type AuditType = "general" | "state" | "fire" | "payer" | "custom"
+type AuditType = "general" | "state" | "fire" | "payer"
 
 function AuditReadinessContent() {
   const { org } = useOrg()
-
   const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
 
   const [selectedAuditType, setSelectedAuditType] = useState<AuditType>("general")
   const [showComplete, setShowComplete] = useState(false)
-  const [showUploadModal, setShowUploadModal] = useState(false)
-  const [showAuditModal, setShowAuditModal] = useState(false)
-  const [showUploadOverlay, setShowUploadOverlay] = useState(false)
-  const [showAuditOverlay, setShowAuditOverlay] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true"
+    }
+    return false
+  })
+
+  const auditScores = {
+    general: 77,
+    state: 64,
+    fire: 82,
+    payer: 70,
+  }
 
   const completeItemsFromSandbox = sandboxData.SANDBOX_AUDIT_COMPLETE_ITEMS.map((item, index) => ({
     id: `c${index + 1}`,
@@ -33,104 +42,54 @@ function AuditReadinessContent() {
 
   const allItems = [...sandboxData.SANDBOX_AUDIT_MISSING, ...completeItemsFromSandbox]
 
-  // Filter items by selected audit type
   const filteredItems = allItems.filter((item) => item.auditTypes.includes(selectedAuditType))
   const missingItems = filteredItems.filter((item) => item.status === "incomplete")
   const completeItems = filteredItems.filter((item) => item.status === "complete")
 
-  const totalItems = filteredItems.length
-  const metItems = completeItems.length
-  const readinessPercent = Math.round((metItems / totalItems) * 100)
-
-  const auditTypeLabels = {
-    general: "General Audit",
-    state: "State Regulatory",
-    fire: "Facility Audit",
-    payer: "Payer-Specific",
-    custom: "Custom Upload",
-  }
+  const auditTypeCards = [
+    { type: "general" as AuditType, label: "General Audit", score: auditScores.general, color: "text-green-600" },
+    { type: "state" as AuditType, label: "State Regulatory", score: auditScores.state, color: "text-yellow-600" },
+    { type: "fire" as AuditType, label: "Facility Audit", score: auditScores.fire, color: "text-green-600" },
+    { type: "payer" as AuditType, label: "Payer-Specific", score: auditScores.payer, color: "text-yellow-600" },
+  ]
 
   return (
     <div className="min-h-screen bg-background">
-      <SandboxPageOverlay
-        pageKey="audit-readiness"
-        title="Preview an audit checklist in sandbox mode"
-        description="This page is showing an example audit checklist and findings so you can see the type of gaps CareLumi highlights before an audit. In your trial, we use your uploads to understand your documents, but full audit checklists and packages are only available on paid plans."
-        featureName="Audit"
-      />
-
       <Sidebar />
       <TopNav />
 
-      <main className="ml-60 mt-16 p-12">
+      <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
         <div className="mx-auto max-w-[1400px]">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h1 className="text-2xl font-semibold text-foreground">Audit Readiness</h1>
-              <Link href="/dashboard" className="text-sm text-primary hover:underline">
-                ← Back to Dashboard
-              </Link>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowUploadOverlay(true)}
-                className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-              >
-                Upload Auditor Requirements
-              </button>
-              <button
-                onClick={() => setShowAuditOverlay(true)}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                Generate Audit Package
-              </button>
-            </div>
+          <div className="mb-8">
+            <Link
+              href="/dashboard"
+              className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Back to Dashboard
+            </Link>
+            <h1 className="text-3xl font-semibold text-foreground">Audit Readiness</h1>
+            <p className="text-sm text-muted-foreground mt-1">Monitor compliance gaps across all audit types</p>
           </div>
 
-          {/* Overall Status Banner */}
-          <div className="mb-6 rounded-lg border border-border bg-card p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                {selectedAuditType !== "custom" && (
-                  <>
-                    <div className="mb-2 flex items-center gap-3">
-                      <span className="text-3xl font-bold text-foreground">{readinessPercent}%</span>
-                      <span className="text-sm text-muted-foreground">Ready</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground">
-                        {metItems} of {totalItems} items complete
-                      </span>
-                      <span className="text-sm text-muted-foreground">•</span>
-                      <span className="text-sm text-amber-600">{missingItems.length} items need attention</span>
-                    </div>
-                  </>
+          <div className="mb-8 grid grid-cols-4 gap-6">
+            {auditTypeCards.map((audit) => (
+              <Card
+                key={audit.type}
+                className={cn(
+                  "cursor-pointer transition-all hover:shadow-md",
+                  selectedAuditType === audit.type && "ring-2 ring-primary shadow-lg",
                 )}
-                {selectedAuditType === "custom" && (
-                  <p className="text-sm text-muted-foreground">
-                    Upload auditor requirements to generate a custom checklist
-                  </p>
-                )}
-              </div>
-
-              {/* Filter Dropdown */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">Audit Type:</label>
-                <select
-                  value={selectedAuditType}
-                  onChange={(e) => setSelectedAuditType(e.target.value as AuditType)}
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {Object.entries(auditTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                onClick={() => setSelectedAuditType(audit.type)}
+              >
+                <CardHeader className="pb-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">{audit.label}</h3>
+                </CardHeader>
+                <CardContent>
+                  <div className={cn("text-3xl font-bold", audit.color)}>{audit.score}%</div>
+                  <p className="text-xs text-muted-foreground mt-1">Ready</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Missing Items Section */}
@@ -179,14 +138,11 @@ function AuditReadinessContent() {
               className="mb-4 flex w-full items-center justify-between text-left"
             >
               <h2 className="text-lg font-semibold text-foreground">Complete Items ({completeItems.length})</h2>
-              <svg
-                className={`h-5 w-5 text-muted-foreground transition-transform ${showComplete ? "rotate-180" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              {showComplete ? (
+                <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              )}
             </button>
 
             {showComplete && (
@@ -217,21 +173,6 @@ function AuditReadinessContent() {
           </div>
         </div>
       </main>
-
-      {showUploadOverlay && (
-        <UpgradeOverlay
-          feature="upload-auditor-requirements"
-          title="Contact Sales to Upgrade"
-          description="Upload custom auditor requirements and generate tailored compliance checklists. Contact our sales team to unlock this premium feature."
-        />
-      )}
-      {showAuditOverlay && (
-        <UpgradeOverlay
-          feature="generate-audit-package"
-          title="Contact Sales to Upgrade"
-          description="Generate comprehensive audit packages with all required documentation. Contact our sales team to unlock this premium feature."
-        />
-      )}
     </div>
   )
 }
