@@ -123,7 +123,18 @@ function DocumentsContent() {
 
     const expDate = new Date(doc.expiration_date)
     const now = new Date()
-    const daysUntilExpiry = Math.floor((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    // Set time to midnight for accurate day comparison
+    expDate.setHours(0, 0, 0, 0)
+    now.setHours(0, 0, 0, 0)
+
+    const daysUntilExpiry = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+    console.log("[v0] Doc status check:", {
+      owner: doc.owner_name,
+      expDate: doc.expiration_date,
+      daysUntilExpiry,
+      isPrimary: doc.is_primary,
+    })
 
     if (daysUntilExpiry < 0) return "expired"
     if (daysUntilExpiry <= 60) return "expiring"
