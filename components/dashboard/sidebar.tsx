@@ -15,10 +15,10 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  DollarSign,
   MessageSquare,
   Phone,
   LogOut,
+  TrendingUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -34,15 +34,32 @@ export function useSidebarCollapsed() {
   return useContext(SidebarContext)
 }
 
-const navigationItems = [
-  { name: "Home", href: "/dashboard", icon: Home },
-  { name: "Staff Licenses", href: "/staff", icon: Users },
-  { name: "Documents & Reports", href: "/documents", icon: FolderOpen },
-  { name: "Payer Credentialing", href: "/payers", icon: ShieldCheck },
-  { name: "Facilities", href: "/facilities", icon: Building2 },
-  { name: "Regulatory Updates", href: "/regulatory", icon: FileText },
-  { name: "Billing Compliance", href: "/revenue-risk", icon: DollarSign },
-  { name: "Audit Readiness", href: "/audit-readiness", icon: ShieldCheck },
+const navigationSections = [
+  {
+    items: [{ name: "Home", href: "/dashboard", icon: Home }],
+  },
+  {
+    title: "COMPLIANCE",
+    items: [
+      { name: "Staff Licenses", href: "/staff", icon: Users },
+      { name: "Facilities", href: "/facilities", icon: Building2 },
+      { name: "Payer Credentialing", href: "/payers", icon: ShieldCheck },
+    ],
+  },
+  {
+    title: "DOCUMENTS",
+    items: [
+      { name: "Documents & Reports", href: "/documents", icon: FolderOpen },
+      { name: "Audit Readiness", href: "/audit-readiness", icon: ShieldCheck },
+    ],
+  },
+  {
+    title: "INSIGHTS",
+    items: [
+      { name: "Regulatory Updates", href: "/regulatory", icon: FileText },
+      { name: "Revenue at Risk", href: "/revenue-risk", icon: TrendingUp },
+    ],
+  },
 ]
 
 export function Sidebar() {
@@ -141,37 +158,56 @@ export function Sidebar() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-2">
-            {navigationItems.map((item) => {
-              const isActive = pathname === item.href
-              const Icon = item.icon
+          <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
+            {navigationSections.map((section, sectionIndex) => (
+              <div key={sectionIndex}>
+                {/* Section Title */}
+                {section.title && !collapsed && (
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {section.title}
+                  </div>
+                )}
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={handleNavigation}
-                  data-tour={
-                    item.name === "Staff Licenses"
-                      ? "staff-nav"
-                      : item.name === "Documents & Reports"
-                        ? "documents-nav"
-                        : undefined
-                  }
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                    isActive
-                      ? "border-l-2 border-primary bg-card text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    collapsed && "justify-center",
-                  )}
-                  title={collapsed ? item.name : undefined}
-                >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {!collapsed && <span>{item.name}</span>}
-                </Link>
-              )
-            })}
+                {/* Section Items */}
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const isActive = pathname === item.href
+                    const Icon = item.icon
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={handleNavigation}
+                        data-tour={
+                          item.name === "Staff Licenses"
+                            ? "staff-nav"
+                            : item.name === "Documents & Reports"
+                              ? "documents-nav"
+                              : undefined
+                        }
+                        className={cn(
+                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                          isActive
+                            ? "border-l-2 border-primary bg-card text-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          collapsed && "justify-center",
+                        )}
+                        title={collapsed ? item.name : undefined}
+                      >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {!collapsed && <span>{item.name}</span>}
+                      </Link>
+                    )
+                  })}
+                </div>
+
+                {/* Divider between sections (except after last section) */}
+                {sectionIndex < navigationSections.length - 1 && !collapsed && (
+                  <div className="my-2 border-b border-border/50" />
+                )}
+              </div>
+            ))}
           </nav>
 
           <div className="border-t border-border p-2 space-y-2">
