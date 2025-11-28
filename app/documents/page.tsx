@@ -65,6 +65,8 @@ function DocumentsContent() {
       groups[key].push(doc)
     })
 
+    console.log("[v0] Document groups:", groups)
+
     // For each group, mark the latest expiring doc as primary
     const markedDocs = docs.map((doc) => {
       const key = `${doc.owner_id}|${doc.document_type}|${doc.jurisdiction || "none"}`
@@ -79,6 +81,14 @@ function DocumentsContent() {
 
       // First doc in sorted list is primary
       const isPrimary = sorted[0].id === doc.id
+
+      console.log("[v0] Marking document:", {
+        owner: doc.owner_name,
+        type: doc.document_type,
+        expiration: doc.expiration_date,
+        isPrimary,
+        groupSize: group.length,
+      })
 
       return { ...doc, is_primary: isPrimary }
     })
@@ -131,9 +141,11 @@ function DocumentsContent() {
 
     console.log("[v0] Doc status check:", {
       owner: doc.owner_name,
+      type: doc.document_type,
       expDate: doc.expiration_date,
       daysUntilExpiry,
       isPrimary: doc.is_primary,
+      status: daysUntilExpiry < 0 ? "expired" : daysUntilExpiry <= 60 ? "expiring" : "valid",
     })
 
     if (daysUntilExpiry < 0) return "expired"
