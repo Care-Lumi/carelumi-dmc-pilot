@@ -42,7 +42,7 @@ export default function AuditReadinessPage() {
     }
   }, [])
 
-  if (!sandboxData) {
+  if (!sandboxData || !org) {
     return (
       <div className="min-h-screen bg-background">
         <Sidebar />
@@ -58,9 +58,11 @@ export default function AuditReadinessPage() {
 
   const uniqueStaff = sandboxData.SANDBOX_DOCUMENTS
     ? sandboxData.SANDBOX_DOCUMENTS.filter((doc: any) => doc.owner_type === "staff").reduce((acc: any[], doc: any) => {
-        if (!acc.find((s) => s.id === doc.owner_id)) {
+        // Use owner_name as unique identifier since staff don't have separate IDs
+        const staffKey = `${doc.owner_name}_${doc.jurisdiction || "default"}`
+        if (!acc.find((s) => s.id === staffKey)) {
           acc.push({
-            id: doc.owner_id,
+            id: staffKey, // Use composite key as ID
             name: doc.owner_name,
             jurisdiction: doc.jurisdiction,
           })
@@ -69,18 +71,33 @@ export default function AuditReadinessPage() {
       }, [])
     : []
 
+  const facilities = (sandboxData.SANDBOX_FACILITIES || []).map((f: any, idx: number) => ({
+    ...f,
+    id: f.id || f.name || `facility_${idx}`,
+  }))
+
+  const payers = (sandboxData.SANDBOX_PAYERS || []).map((p: any, idx: number) => ({
+    ...p,
+    id: p.id || p.name || `payer_${idx}`,
+  }))
+
   // Prepare entities for audit calculation
   const entities = {
     staff: uniqueStaff,
-    facilities: sandboxData.SANDBOX_FACILITIES || [],
-    payers: sandboxData.SANDBOX_PAYERS || [],
+    facilities: facilities,
+    payers: payers,
   }
 
+  const documentsWithStaffKeys = (sandboxData.SANDBOX_DOCUMENTS || []).map((doc: any) => ({
+    ...doc,
+    owner_id: doc.owner_type === "staff" ? `${doc.owner_name}_${doc.jurisdiction || "default"}` : doc.owner_id,
+  }))
+
   // Calculate scores for all audit types
-  const generalAudit = calculateAuditScore("general", sandboxData.SANDBOX_DOCUMENTS || [], entities)
-  const stateAudit = calculateAuditScore("state", sandboxData.SANDBOX_DOCUMENTS || [], entities)
-  const facilityAudit = calculateAuditScore("facility", sandboxData.SANDBOX_DOCUMENTS || [], entities)
-  const payerAudit = calculateAuditScore("payer", sandboxData.SANDBOX_DOCUMENTS || [], entities)
+  const generalAudit = calculateAuditScore("general", documentsWithStaffKeys, entities)
+  const stateAudit = calculateAuditScore("state", documentsWithStaffKeys, entities)
+  const facilityAudit = calculateAuditScore("facility", documentsWithStaffKeys, entities)
+  const payerAudit = calculateAuditScore("payer", documentsWithStaffKeys, entities)
 
   const auditScores = {
     general: generalAudit,

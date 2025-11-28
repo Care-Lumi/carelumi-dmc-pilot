@@ -49,7 +49,6 @@ export default function DashboardPage() {
     }
 
     const handleDocumentsUpdated = () => {
-      console.log("[v0] Documents updated, refreshing dashboard metrics")
       setRefreshKey((prev) => prev + 1)
     }
 
@@ -68,15 +67,10 @@ export default function DashboardPage() {
 
   const fetchMetrics = async () => {
     try {
-      console.log("[v0] Fetching dashboard metrics...")
       const response = await fetch("/api/documents")
       const data = await response.json()
 
-      console.log("[v0] API response:", data)
-
       if (response.ok && data.documents && Array.isArray(data.documents)) {
-        console.log("[v0] Total documents:", data.documents.length)
-
         const payers = new Set(
           data.documents
             .filter(
@@ -90,32 +84,11 @@ export default function DashboardPage() {
         const now = new Date()
         const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
 
-        console.log("[v0] Current date:", now.toISOString())
-        console.log("[v0] 60 days from now:", sixtyDaysFromNow.toISOString())
-
         const expiring = data.documents.filter((doc: any) => {
-          console.log("[v0] Checking document:", {
-            filename: doc.file_name,
-            expiration_date: doc.expiration_date,
-            document_type: doc.document_type,
-          })
-
-          if (!doc.expiration_date) {
-            console.log("[v0] No expiration date found for:", doc.file_name)
-            return false
-          }
-
+          if (!doc.expiration_date) return false
           const expDate = new Date(doc.expiration_date)
-          console.log("[v0] Parsed expiration date:", expDate.toISOString(), "Valid:", !isNaN(expDate.getTime()))
-
-          const isExpiring = expDate > now && expDate <= sixtyDaysFromNow
-          console.log("[v0] Is expiring within 60 days?", isExpiring)
-
-          return isExpiring
+          return expDate > now && expDate <= sixtyDaysFromNow
         })
-
-        console.log("[v0] Expiring documents count:", expiring.length)
-        console.log("[v0] Payer count:", payers.size)
 
         const alerts = data.documents
           .filter((doc: any) => {
@@ -138,7 +111,6 @@ export default function DashboardPage() {
           }))
 
         setCriticalAlerts(alerts)
-        console.log("[v0] Critical alerts:", alerts.length)
 
         setMetrics({
           payerCount: payers.size,
@@ -146,7 +118,6 @@ export default function DashboardPage() {
           loading: false,
         })
       } else {
-        console.log("[v0] No documents found or API call failed")
         setMetrics({ payerCount: 0, expiringCount: 0, loading: false })
       }
     } catch (error) {
@@ -219,7 +190,14 @@ function DashboardContent({
   handleTourComplete,
 }: any) {
   const { org } = useOrg()
-  const sandboxData = getSandboxDataForOrg(org?.type || "surgery_center")
+  const [sandboxData, setSandboxData] = useState<any>(null)
+
+  useEffect(() => {
+    if (org?.type) {
+      const data = getSandboxDataForOrg(org.type)
+      setSandboxData(data)
+    }
+  }, [org])
 
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
@@ -231,6 +209,8 @@ function DashboardContent({
   const [actionItems, setActionItems] = useState<any[]>([])
 
   useEffect(() => {
+    if (!sandboxData?.SANDBOX_DOCUMENTS) return
+
     const now = new Date()
     const sixtyDaysFromNow = new Date()
     sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60)
@@ -238,7 +218,6 @@ function DashboardContent({
     const items = sandboxData.SANDBOX_DOCUMENTS.filter((doc: any) => {
       if (!doc.expiration_date) return false
       const expDate = new Date(doc.expiration_date)
-      // Show if expired OR expiring within 60 days
       return expDate <= sixtyDaysFromNow
     })
       .map((doc: any) => {
@@ -255,7 +234,6 @@ function DashboardContent({
         }
       })
       .sort((a: any, b: any) => {
-        // Sort: expired first, then by urgency (days until expiry)
         if (a.is_expired && !b.is_expired) return -1
         if (!a.is_expired && b.is_expired) return 1
         return a.days_until_expiry - b.days_until_expiry
@@ -273,6 +251,16 @@ function DashboardContent({
       window.removeEventListener("sidebar-collapsed-changed" as any, handleCollapsedChange)
     }
   }, [])
+
+  if (!sandboxData) {
+    return (
+      <main className={cn("mt-16 p-12 transition-all duration-300", collapsed ? "ml-16" : "ml-60")}>
+        <div className="mx-auto max-w-[1400px] flex items-center justify-center h-96">
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </main>
+    )
+  }
 
   const topActionItems = actionItems.slice(0, 3)
   const remainingCount = actionItems.length - 3
