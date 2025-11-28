@@ -7,7 +7,7 @@ import { TopNav } from "@/components/dashboard/top-nav"
 import { UploadDocumentsModal } from "@/components/dashboard/upload-documents-modal"
 import { UpgradeOverlay } from "@/components/upgrade-overlay"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ChevronLeft, Building2, UserCheck, BookOpen, X, Search, UploadIcon } from "lucide-react"
+import { ChevronLeft, Building2, UserCheck, BookOpen, X, Search, UploadIcon, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type Document = {
@@ -54,7 +54,6 @@ function DocumentsContent() {
   }, [])
 
   const markPrimaryDocuments = (docs: Document[]): Document[] => {
-    // Group documents by (owner_id, doc_type, jurisdiction)
     const groups: Record<string, Document[]> = {}
 
     docs.forEach((doc) => {
@@ -65,30 +64,17 @@ function DocumentsContent() {
       groups[key].push(doc)
     })
 
-    console.log("[v0] Document groups:", groups)
-
-    // For each group, mark the latest expiring doc as primary
     const markedDocs = docs.map((doc) => {
       const key = `${doc.owner_id}|${doc.document_type}|${doc.jurisdiction || "none"}`
       const group = groups[key]
 
-      // Sort by expiration_date DESC (nulls last)
       const sorted = [...group].sort((a, b) => {
         if (!a.expiration_date) return 1
         if (!b.expiration_date) return -1
         return new Date(b.expiration_date).getTime() - new Date(a.expiration_date).getTime()
       })
 
-      // First doc in sorted list is primary
       const isPrimary = sorted[0].id === doc.id
-
-      console.log("[v0] Marking document:", {
-        owner: doc.owner_name,
-        type: doc.document_type,
-        expiration: doc.expiration_date,
-        isPrimary,
-        groupSize: group.length,
-      })
 
       return { ...doc, is_primary: isPrimary }
     })
@@ -133,20 +119,10 @@ function DocumentsContent() {
 
     const expDate = new Date(doc.expiration_date)
     const now = new Date()
-    // Set time to midnight for accurate day comparison
     expDate.setHours(0, 0, 0, 0)
     now.setHours(0, 0, 0, 0)
 
     const daysUntilExpiry = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-    console.log("[v0] Doc status check:", {
-      owner: doc.owner_name,
-      type: doc.document_type,
-      expDate: doc.expiration_date,
-      daysUntilExpiry,
-      isPrimary: doc.is_primary,
-      status: daysUntilExpiry < 0 ? "expired" : daysUntilExpiry <= 60 ? "expiring" : "valid",
-    })
 
     if (daysUntilExpiry < 0) return "expired"
     if (daysUntilExpiry <= 60) return "expiring"
@@ -304,7 +280,15 @@ function DocumentsContent() {
                   onClick={() => handleMetricCardClick("expired")}
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <h3 className="text-sm font-medium">Expired Documents</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium">Expired Documents</h3>
+                      <div className="group relative">
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 rounded-md bg-popover p-3 text-xs text-popover-foreground shadow-lg border border-border">
+                          Primary documents that have passed their expiration date and need immediate renewal.
+                        </div>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-left text-red-600">{expiredDocs}</div>
@@ -319,7 +303,15 @@ function DocumentsContent() {
                   onClick={() => handleMetricCardClick("expiring")}
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <h3 className="text-sm font-medium">Expiring Soon</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium">Expiring Soon</h3>
+                      <div className="group relative">
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 rounded-md bg-popover p-3 text-xs text-popover-foreground shadow-lg border border-border">
+                          Primary documents expiring within the next 60 days that require proactive renewal.
+                        </div>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-left text-orange-600">{expiringDocs}</div>
@@ -334,7 +326,16 @@ function DocumentsContent() {
                   onClick={() => handleMetricCardClick("historical")}
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <h3 className="text-sm font-medium">Audit History</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium">Audit History</h3>
+                      <div className="group relative">
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        <div className="absolute left-0 top-6 hidden group-hover:block z-10 w-64 rounded-md bg-popover p-3 text-xs text-popover-foreground shadow-lg border border-border">
+                          Historical versions of documents that have been replaced by newer versions. Kept for audit
+                          trail and compliance history.
+                        </div>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-left text-gray-600">{historicalDocs}</div>
