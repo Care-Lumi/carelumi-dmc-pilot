@@ -16,12 +16,13 @@ type Document = {
   file_url: string
   document_type: string
   owner_name: string
+  owner_id: string
   owner_type: "staff" | "facility" | "payer" | "policy"
   expiration_date: string | null
   license_number: string | null
   jurisdiction: string | null
   created_at: string
-  status: "active" | "historical" // Added status field to Document type
+  is_primary?: boolean // Added is_primary flag to track primary vs historical docs
 }
 
 function DocumentsContent() {
@@ -30,7 +31,7 @@ function DocumentsContent() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showDocumentModal, setShowDocumentModal] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
-  const [statusFilter, setStatusFilter] = useState<"expired" | "expiring" | null>(null)
+  const [statusFilter, setStatusFilter] = useState<"expired" | "expiring" | "historical" | null>(null) // Added "historical" filter
   const [selectedCategory, setSelectedCategory] = useState<string | null>("all")
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,12 +53,46 @@ function DocumentsContent() {
     }
   }, [])
 
+  const markPrimaryDocuments = (docs: Document[]): Document[] => {
+    // Group documents by (owner_id, doc_type, jurisdiction)
+    const groups: Record<string, Document[]> = {}
+
+    docs.forEach((doc) => {
+      const key = `${doc.owner_id}|${doc.document_type}|${doc.jurisdiction || "none"}`
+      if (!groups[key]) {
+        groups[key] = []
+      }
+      groups[key].push(doc)
+    })
+
+    // For each group, mark the latest expiring doc as primary
+    const markedDocs = docs.map((doc) => {
+      const key = `${doc.owner_id}|${doc.document_type}|${doc.jurisdiction || "none"}`
+      const group = groups[key]
+
+      // Sort by expiration_date DESC (nulls last)
+      const sorted = [...group].sort((a, b) => {
+        if (!a.expiration_date) return 1
+        if (!b.expiration_date) return -1
+        return new Date(b.expiration_date).getTime() - new Date(a.expiration_date).getTime()
+      })
+
+      // First doc in sorted list is primary
+      const isPrimary = sorted[0].id === doc.id
+
+      return { ...doc, is_primary: isPrimary }
+    })
+
+    return markedDocs
+  }
+
   const fetchDocuments = async () => {
     try {
       const response = await fetch("/api/documents")
       if (response.ok) {
         const data = await response.json()
-        setDocuments(data.documents || [])
+        const markedDocs = markPrimaryDocuments(data.documents || [])
+        setDocuments(markedDocs)
       }
     } catch (error) {
       console.error("[v0] Failed to fetch documents:", error)
@@ -82,9 +117,11 @@ function DocumentsContent() {
     window.scrollTo(0, 0)
   }, [])
 
-  const getDocumentStatus = (expirationDate: string | null) => {
-    if (!expirationDate) return null
-    const expDate = new Date(expirationDate)
+  const getDocumentStatus = (doc: Document) => {
+    if (!doc.is_primary) return "historical"
+    if (!doc.expiration_date) return null
+
+    const expDate = new Date(doc.expiration_date)
     const now = new Date()
     const daysUntilExpiry = Math.floor((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
@@ -93,15 +130,16 @@ function DocumentsContent() {
     return "valid"
   }
 
-  const expiredDocs = documents.filter((d) => getDocumentStatus(d.expiration_date) === "expired").length
-  const expiringDocs = documents.filter((d) => getDocumentStatus(d.expiration_date) === "expiring").length
+  const expiredDocs = documents.filter((d) => d.is_primary && getDocumentStatus(d) === "expired").length
+  const expiringDocs = documents.filter((d) => d.is_primary && getDocumentStatus(d) === "expiring").length
+  const historicalDocs = documents.filter((d) => !d.is_primary).length
 
-  const handleMetricCardClick = (type: "expired" | "expiring") => {
+  const handleMetricCardClick = (type: "expired" | "expiring" | "historical") => {
     setStatusFilter(statusFilter === type ? null : type)
   }
 
   const filteredDocuments = documents.filter((doc) => {
-    const status = getDocumentStatus(doc.expiration_date)
+    const status = getDocumentStatus(doc)
     const matchesStatus = !statusFilter || status === statusFilter
     const matchesCategory = selectedCategory === "all" || doc.owner_type === selectedCategory
     const matchesSearch =
@@ -235,7 +273,6 @@ function DocumentsContent() {
 
           {!showEmptyState && (
             <>
-              {/* Metric Cards */}
               <div className="mb-6 grid grid-cols-3 gap-6">
                 <Card
                   className={`cursor-pointer transition-all ${
@@ -247,14 +284,14 @@ function DocumentsContent() {
                     <h3 className="text-sm font-medium">Expired Documents</h3>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-left text-destructive-foreground">{expiredDocs}</div>
+                    <div className="text-2xl font-bold text-left text-red-600">{expiredDocs}</div>
                     <p className="text-xs text-muted-foreground">need immediate attention</p>
                   </CardContent>
                 </Card>
 
                 <Card
                   className={`cursor-pointer transition-all ${
-                    statusFilter === "expiring" ? "ring-2 ring-yellow-600 shadow-lg" : "hover:shadow-md"
+                    statusFilter === "expiring" ? "ring-2 ring-orange-600 shadow-lg" : "hover:shadow-md"
                   }`}
                   onClick={() => handleMetricCardClick("expiring")}
                 >
@@ -262,19 +299,23 @@ function DocumentsContent() {
                     <h3 className="text-sm font-medium">Expiring Soon</h3>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-left text-yellow-600">{expiringDocs}</div>
+                    <div className="text-2xl font-bold text-left text-orange-600">{expiringDocs}</div>
                     <p className="text-xs text-muted-foreground">within next 60 days</p>
                   </CardContent>
                 </Card>
 
-                {/* Audit History card */}
-                <Card className="hover:shadow-md transition-all">
+                <Card
+                  className={`cursor-pointer transition-all ${
+                    statusFilter === "historical" ? "ring-2 ring-gray-600 shadow-lg" : "hover:shadow-md"
+                  }`}
+                  onClick={() => handleMetricCardClick("historical")}
+                >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <h3 className="text-sm font-medium">Audit History</h3>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-left text-primary">{documents.length}</div>
-                    <p className="text-xs text-muted-foreground">documents uploaded</p>
+                    <div className="text-2xl font-bold text-left text-gray-600">{historicalDocs}</div>
+                    <p className="text-xs text-muted-foreground">archived documents</p>
                   </CardContent>
                 </Card>
               </div>
@@ -367,30 +408,30 @@ function DocumentsContent() {
                       </thead>
                       <tbody>
                         {filteredDocuments.map((doc) => {
-                          const status = getDocumentStatus(doc.expiration_date)
+                          const status = getDocumentStatus(doc)
+
+                          let expirationColor = "text-muted-foreground"
+                          let expirationTooltip = ""
+
+                          if (status === "expired") {
+                            expirationColor = "text-red-600 font-medium"
+                            expirationTooltip = "Primary document expired - needs renewal"
+                          } else if (status === "expiring") {
+                            expirationColor = "text-orange-600 font-medium"
+                            expirationTooltip = "Primary document expiring within 60 days"
+                          } else if (status === "historical") {
+                            expirationColor = "text-gray-500"
+                            expirationTooltip = "Historical version - archived for audit purposes"
+                          }
+
                           return (
                             <tr key={doc.id} className="border-b border-border last:border-0">
-                              <td className="py-3 text-sm font-medium text-foreground">
-                                {doc.owner_name}
-                                {doc.status === "historical" && (
-                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                                    Historical
-                                  </span>
-                                )}
-                              </td>
+                              <td className="py-3 text-sm font-medium text-foreground">{doc.owner_name}</td>
                               <td className="py-3 text-sm text-muted-foreground">{doc.document_type}</td>
                               <td className="py-3 text-sm text-muted-foreground">{doc.jurisdiction || "—"}</td>
                               <td className="py-3 text-sm">
                                 {doc.expiration_date ? (
-                                  <span
-                                    className={
-                                      status === "expired"
-                                        ? "text-red-600 font-medium"
-                                        : status === "expiring"
-                                          ? "text-yellow-600 font-medium"
-                                          : "text-muted-foreground"
-                                    }
-                                  >
+                                  <span className={expirationColor} title={expirationTooltip}>
                                     {new Date(doc.expiration_date).toLocaleDateString()}
                                   </span>
                                 ) : (
