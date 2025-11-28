@@ -7,10 +7,8 @@ import { Sidebar } from "@/components/dashboard/sidebar"
 import { TopNav } from "@/components/dashboard/top-nav"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
-import { ChevronLeft, Search, Mic, RefreshCcw, HelpCircle } from "lucide-react"
+import { ChevronLeft, Mic, RefreshCcw, HelpCircle } from "lucide-react"
 import type { SANDBOX_BILLING_COMPLIANCE } from "@/lib/data/sandbox-data"
 import { ClipActionModal } from "@/components/dashboard/modals/clip-action-modal"
 import { SandboxPageOverlay } from "@/components/sandbox-page-overlay"
@@ -158,42 +156,42 @@ function RevenueRiskContent() {
 
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
+              <input
+                type="text"
                 placeholder="Search providers or payers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-10"
+                className="h-10 w-full rounded-md border border-border bg-card px-4 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              <Mic className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <Mic className="h-4 w-4" />
+              </button>
             </div>
-            <Select value={providerFilter} onValueChange={setProviderFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All Providers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Providers</SelectItem>
-                {providers.map((provider) => (
-                  <SelectItem key={provider} value={provider}>
-                    {provider}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={providerFilter}
+              onChange={(e) => setProviderFilter(e.target.value)}
+              className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="all">All Providers</option>
+              {providers.map((provider) => (
+                <option key={provider} value={provider}>
+                  {provider}
+                </option>
+              ))}
+            </select>
 
-            <Select value={payerFilter} onValueChange={setPayerFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="All Payers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payers</SelectItem>
-                {payers.map((payer) => (
-                  <SelectItem key={payer} value={payer}>
-                    {payer}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={payerFilter}
+              onChange={(e) => setPayerFilter(e.target.value)}
+              className="h-10 rounded-md border border-border bg-card px-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="all">All Payers</option>
+              {payers.map((payer) => (
+                <option key={payer} value={payer}>
+                  {payer}
+                </option>
+              ))}
+            </select>
           </div>
 
           <Card>

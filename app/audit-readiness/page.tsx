@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getSandboxDataForOrg } from "@/lib/utils/sandbox"
 import { useOrg } from "@/lib/contexts/org-context"
-import { ChevronDown, ChevronUp, Upload, FileArchive, AlertCircle, Clock } from "lucide-react"
+import { ChevronDown, ChevronUp, Upload, FileArchive, AlertCircle, Clock, Mic } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type AuditType, calculateAuditScore } from "@/lib/audit-requirements"
 
@@ -18,6 +18,7 @@ export default function AuditReadinessPage() {
   const [selectedAuditType, setSelectedAuditType] = useState<AuditType>("general")
   const [showComplete, setShowComplete] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("sidebar-collapsed") === "true"
@@ -135,6 +136,15 @@ export default function AuditReadinessPage() {
     alert("Generate Audit Package feature coming soon")
   }
 
+  const filteredMissingItems = selectedAudit.missingItems.filter(
+    (item: any) =>
+      searchQuery === "" ||
+      item.entity_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.doc_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.jurisdiction?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.year.toString().includes(searchQuery),
+  )
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -228,42 +238,59 @@ export default function AuditReadinessPage() {
           )}
 
           {selectedAudit.missingItems.length > 0 && (
-            <div className="mb-6">
-              <h2 className="mb-4 text-lg font-semibold text-foreground">
-                Missing Items ({selectedAudit.missingItems.length})
-              </h2>
-              <div className="space-y-3">
-                {selectedAudit.missingItems.map((item: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      <svg
-                        className="mt-1 h-5 w-5 flex-shrink-0 text-red-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        />
-                      </svg>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          Upload {item.year} {item.jurisdiction} {item.doc_type} for {item.entity_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground capitalize">{item.entity_type} / Compliance</p>
-                      </div>
-                    </div>
-                    <Button size="sm">Resolve</Button>
-                  </div>
-                ))}
+            <>
+              <div className="mb-6">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search missing items by entity, document type, or year..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-10 w-full rounded-md border border-border bg-card px-4 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <Mic className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-            </div>
+
+              <div className="mb-6">
+                <h2 className="mb-4 text-lg font-semibold text-foreground">
+                  Missing Items ({filteredMissingItems.length})
+                </h2>
+                <div className="space-y-3">
+                  {filteredMissingItems.map((item: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <svg
+                          className="mt-1 h-5 w-5 flex-shrink-0 text-red-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
+                        </svg>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            Upload {item.year} {item.jurisdiction} {item.doc_type} for {item.entity_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground capitalize">{item.entity_type} / Compliance</p>
+                        </div>
+                      </div>
+                      <Button size="sm">Resolve</Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
           {/* Complete Items Section */}
