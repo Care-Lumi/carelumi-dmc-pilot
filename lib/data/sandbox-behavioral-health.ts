@@ -221,6 +221,16 @@ export const SANDBOX_BILLING_COMPLIANCE = [
   },
 ]
 
+export const SANDBOX_AUDIT_COMPLETE_ITEMS = [
+  "Informed consent forms signed and on file for all active clients.",
+  "Malpractice insurance certificates current for all providers.",
+  "HIPAA privacy & security training completed within the last 12 months.",
+  "Suicide risk assessment protocols documented and followed.",
+  "Emergency contact information current for all clients.",
+  "Confidentiality policies posted and acknowledged by clients.",
+  "Professional license verification completed for all clinicians.",
+]
+
 export const SANDBOX_AUDIT_MISSING = [
   {
     id: "treatment-plans",
@@ -237,44 +247,5 @@ export const SANDBOX_AUDIT_MISSING = [
     action: "Upload 2 months of supervision logs for 2 pre-licensed therapists.",
     status: "incomplete" as const,
     auditTypes: ["general" as const, "state" as const],
-  },
-]
-
-export const SANDBOX_AUDIT_COMPLETE_ITEMS = [
-  "Informed consent forms signed and on file for all active clients.",
-  "Malpractice insurance certificates current for all providers.",
-  "HIPAA privacy & security training completed within the last 12 months.",
-  "Suicide risk assessment protocols documented and followed.",
-  "Emergency contact information current for all clients.",
-  "Confidentiality policies posted and acknowledged by clients.",
-  "Professional license verification completed for all clinicians.",
-]
-
-export const SANDBOX_DOCUMENTS = [
-  {
-    id: "doc-martin-lcsw",
-    file_name: "lcsw-license-martin-beck.pdf",
-    document_type: "LCSW License",
-    owner_name: "Martin Beck",
-    owner_id: "staff-martin",
-    owner_type: "staff",
-    issue_date: "2024-01-01",
-    expiration_date: "2026-04-30",
-    license_number: "LCSW-149.012345",
-    jurisdiction: "Illinois",
-    created_at: "2024-01-10",
-  },
-  {
-    id: "doc-jessica-lcpc",
-    file_name: "lcpc-license-jessica-ramos.pdf",
-    document_type: "LCPC License",
-    owner_name: "Jessica Ramos",
-    owner_id: "staff-jessica",
-    owner_type: "staff",
-    issue_date: "2023-06-01",
-    expiration_date: "2026-05-31",
-    license_number: "LCPC-178.023456",
-    jurisdiction: "Illinois",
-    created_at: "2023-06-15",
   },
 ]
