@@ -17,7 +17,7 @@ interface AuditReadinessCardProps {
 
 export function AuditReadinessCard({ className, locked = false }: AuditReadinessCardProps) {
   const { org } = useOrg()
-  const [score, setScore] = useState(77) // Default demo score
+  const [score, setScore] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -30,6 +30,13 @@ export function AuditReadinessCard({ className, locked = false }: AuditReadiness
           if (response.ok) {
             const data = await response.json()
             const documents = data.documents || []
+
+            if (documents.length === 0) {
+              setScore(0)
+              setIsLoading(false)
+              return
+            }
+
             const sandboxData = getSandboxDataForOrg(org.type)
 
             // Extract entities
@@ -66,7 +73,6 @@ export function AuditReadinessCard({ className, locked = false }: AuditReadiness
           console.error("[v0] Failed to calculate audit score:", error)
         }
       }
-      // For Free tier, use demo score of 77%
       setIsLoading(false)
     }
 
@@ -107,8 +113,10 @@ export function AuditReadinessCard({ className, locked = false }: AuditReadiness
             </div>
 
             <div className="mt-4 space-y-1">
-              <p className="font-semibold text-green-600 text-3xl">{score}%</p>
-              <p className="text-sm font-medium text-green-600">General Audit Ready</p>
+              <p className={cn("font-semibold text-3xl", score === 0 ? "text-red-600" : "text-green-600")}>{score}%</p>
+              <p className={cn("text-sm font-medium", score === 0 ? "text-red-600" : "text-green-600")}>
+                {score === 0 ? "No Documents Uploaded" : "General Audit Ready"}
+              </p>
             </div>
 
             <div className="pt-2">

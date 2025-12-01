@@ -110,7 +110,7 @@ export default function AuditReadinessPage() {
   }
 
   const useRealData = org.useRealData?.auditReadiness
-  const documentsToUse = useRealData ? realDocuments : sandboxData.SANDBOX_DOCUMENTS || []
+  const documentsToUse = useRealData ? realDocuments : []
 
   const uniqueStaff = documentsToUse
     .filter((doc: any) => doc.owner_type === "staff")
