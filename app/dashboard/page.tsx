@@ -8,7 +8,6 @@ import { RevenueAtRiskCard } from "@/components/dashboard/revenue-at-risk-card"
 import { CredentialingPipelineCard } from "@/components/dashboard/credentialing-pipeline-card"
 import { ExpiringSoonCard } from "@/components/dashboard/expiring-soon-card"
 import { AuditReadinessCard } from "@/components/dashboard/audit-readiness-card"
-import { CriticalAlerts } from "@/components/dashboard/critical-alerts"
 import { OnboardingWelcome } from "@/components/dashboard/onboarding-welcome"
 import { TourOverlay } from "@/components/dashboard/tour-overlay"
 import { AIProcessingModal } from "@/components/dashboard/modals/ai-processing-modal"
@@ -351,10 +350,6 @@ function DashboardContent({
               )}
             </div>
           )}
-
-          <div data-tour="critical-alerts">
-            <CriticalAlerts alerts={criticalAlerts} />
-          </div>
         </div>
       </main>
 
