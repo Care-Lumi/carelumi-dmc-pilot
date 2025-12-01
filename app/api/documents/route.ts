@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
 // POST /api/documents - Save a new document
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Starting document upload")
     const orgId = await getOrgIdServer()
+    console.log("[v0] Org ID:", orgId)
+
     if (!orgId) {
       return NextResponse.json({ error: "Organization not found" }, { status: 401 })
     }
@@ -74,16 +77,20 @@ export async function POST(request: NextRequest) {
     })
 
     if (!file) {
+      console.error("[v0] No file provided in request")
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
+    console.log("[v0] Uploading file to Vercel Blob:", file.name)
     // Upload to Vercel Blob
     const blob = await put(file.name, file, {
       access: "public",
     })
+    console.log("[v0] Blob uploaded successfully:", blob.url)
 
     // Generate document ID
     const docId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    console.log("[v0] Generated document ID:", docId)
 
     let expirationDate: Date | null = null
     if (expiresAt) {
@@ -105,15 +112,16 @@ export async function POST(request: NextRequest) {
     const status = saveAsHistorical ? "historical" : "active"
 
     if (documentToMarkHistorical) {
+      console.log("[v0] Marking old document as historical:", documentToMarkHistorical)
       await sql`
         UPDATE documents
         SET status = 'historical'
         WHERE id = ${documentToMarkHistorical}
       `
-      console.log("[v0] Marked old document as historical:", documentToMarkHistorical)
+      console.log("[v0] Marked old document as historical successfully")
     }
 
-    // Insert into database
+    console.log("[v0] Inserting document into database...")
     await sql`
       INSERT INTO documents (
         id, org_id, file_url, original_filename,
@@ -137,34 +145,39 @@ export async function POST(request: NextRequest) {
       )
     `
 
-    console.log("[v0] Document saved to database with ID:", docId, "status:", status)
+    console.log("[v0] Document saved to database successfully with ID:", docId, "status:", status)
 
-    // If owner_name exists, upsert into respective table
     if (ownerName && ownerType === "staff") {
+      console.log("[v0] Creating/updating staff member:", ownerName)
       const staffId = `staff_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       await sql`
         INSERT INTO staff (id, org_id, name, status)
         VALUES (${staffId}, ${orgId}, ${ownerName}, 'active')
         ON CONFLICT (org_id, name) DO NOTHING
       `
-      console.log("[v0] Staff member created/updated:", ownerName)
+      console.log("[v0] Staff member created/updated successfully")
     } else if (ownerName && ownerType === "facility") {
+      console.log("[v0] Creating/updating facility:", ownerName)
       const facilityId = `fac_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       await sql`
         INSERT INTO facilities (id, org_id, name, state, status)
         VALUES (${facilityId}, ${orgId}, ${ownerName}, ${jurisdiction}, 'active')
         ON CONFLICT (org_id, name) DO NOTHING
       `
+      console.log("[v0] Facility created/updated successfully")
     } else if (ownerName && ownerType === "payer") {
+      console.log("[v0] Creating/updating payer:", ownerName)
       const payerId = `payer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       await sql`
         INSERT INTO payers (id, org_id, name, status)
         VALUES (${payerId}, ${orgId}, ${ownerName}, 'active')
         ON CONFLICT (org_id, name) DO NOTHING
       `
+      console.log("[v0] Payer created/updated successfully")
     }
 
     // Fetch the created document with mapped field names
+    console.log("[v0] Fetching created document...")
     const [document] = await sql`
       SELECT 
         id,
@@ -182,10 +195,21 @@ export async function POST(request: NextRequest) {
       WHERE id = ${docId}
     `
 
-    console.log("[v0] Returning document:", document)
+    console.log("[v0] Document fetched successfully, returning response")
     return NextResponse.json({ document })
-  } catch (error) {
-    console.error("[v0] Error saving document:", error)
-    return NextResponse.json({ error: "Failed to save document" }, { status: 500 })
+  } catch (error: any) {
+    console.error("[v0] Error saving document - Full error:", error)
+    console.error("[v0] Error message:", error?.message)
+    console.error("[v0] Error stack:", error?.stack)
+    console.error("[v0] Error name:", error?.name)
+
+    return NextResponse.json(
+      {
+        error: "Failed to save document",
+        details: error?.message || "Unknown error",
+        errorType: error?.name || "UnknownError",
+      },
+      { status: 500 },
+    )
   }
 }
