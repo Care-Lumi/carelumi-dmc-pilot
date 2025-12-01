@@ -160,21 +160,28 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadComplete }: Uplo
       const formData = new FormData()
       formData.append("file", file)
 
+      console.log("[v0] Sending file to classify-document API:", file.name)
       const response = await fetch("/api/classify-document", {
         method: "POST",
         body: formData,
       })
 
+      console.log("[v0] Classification API response status:", response.status)
       const result = await response.json()
+      console.log("[v0] Classification API response body:", result)
 
       if (!response.ok) {
+        const errorMessage =
+          result.details || result.error || "Unable to process document. AI services may be temporarily unavailable."
+        console.error("[v0] Classification failed with error:", errorMessage)
+
         toast({
           title: "Classification Failed",
-          description: result.error || "Unable to process document. AI services may be temporarily unavailable.",
+          description: errorMessage,
           variant: "destructive",
         })
         setUploadStatus("error")
-        setErrorMessage(result.error || "Failed to process document")
+        setErrorMessage(errorMessage)
         return
       }
 
@@ -309,9 +316,7 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadComplete }: Uplo
     }
   }
 
-  const handleSave = async () => {
-    setUploadStatus("saving")
-
+  const handleSaveChanges = async () => {
     try {
       const file = selectedFiles[currentFileIndex]
       const formData = new FormData()
@@ -324,22 +329,18 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadComplete }: Uplo
       formData.append("expiresAt", editedExpiration)
       formData.append("classificationRaw", JSON.stringify(classification))
 
+      if (duplicateCheck?.documentToMarkHistorical) {
+        formData.append("documentToMarkHistorical", duplicateCheck.documentToMarkHistorical)
+      }
       if (duplicateCheck?.isHistorical) {
         formData.append("saveAsHistorical", "true")
-        console.log("[v0] Saving document as historical")
-      }
-      if (duplicateCheck?.isRenewal && duplicateCheck?.documentToMarkHistorical) {
-        formData.append("documentToMarkHistorical", duplicateCheck.documentToMarkHistorical)
-        console.log("[v0] Will mark existing document as historical:", duplicateCheck.documentToMarkHistorical)
       }
 
-      console.log("[v0] Saving document with data:", {
+      console.log("[v0] Sending document to save API:", {
         docType: editedType,
         ownerType: editedOwnerType,
         ownerName: editedOwnerName,
         expiresAt: editedExpiration,
-        saveAsHistorical: duplicateCheck?.isHistorical || false,
-        documentToMarkHistorical: duplicateCheck?.documentToMarkHistorical || null,
       })
 
       const response = await fetch("/api/documents", {
@@ -347,9 +348,13 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadComplete }: Uplo
         body: formData,
       })
 
+      console.log("[v0] Save API response status:", response.status)
+
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to save document")
+        console.error("[v0] Save API error response:", errorData)
+        const errorMessage = errorData.details || errorData.error || "Failed to save document"
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -834,7 +839,7 @@ export function UploadDocumentsModal({ isOpen, onClose, onUploadComplete }: Uplo
 
                 <div className="flex justify-end pt-2">
                   <button
-                    onClick={handleSave}
+                    onClick={handleSaveChanges}
                     className="px-6 py-2.5 bg-[#3b82f6] text-white rounded-md font-medium hover:bg-[#3b82f6]/90 transition-colors"
                   >
                     Confirm & Save
